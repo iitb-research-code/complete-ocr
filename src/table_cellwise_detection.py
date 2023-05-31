@@ -5,6 +5,7 @@ import glob as glob
 import torchvision
 from torchvision.models.detection.faster_rcnn import FastRCNNPredictor
 import pytesseract
+from ocr_config import faster_rcnn_model_path, det_threshold, table_recognition_language
 
 
 # Returns Faster RCNN model to perfrom table cell-wise detection
@@ -33,8 +34,6 @@ def get_cells_from_table(tab, cells):
             tablecells.append(c)
     return tablecells
 
-
-
 def get_tables_from_page(img_file):
     full_table_response = []
     # set the computation device
@@ -42,7 +41,7 @@ def get_tables_from_page(img_file):
     # load the model and the trained weights
     model = create_model(num_classes=3).to(device)
     model.load_state_dict(torch.load(
-        '../../rcnn_model/model100.pth', map_location=device
+        faster_rcnn_model_path, map_location=device
     ))
     model.eval()
 
@@ -51,7 +50,7 @@ def get_tables_from_page(img_file):
         'bkg', 'table', 'cell'
     ]
     # any detection having score below this will be discarded
-    detection_threshold = 0.75
+    detection_threshold = det_threshold
 
     # get the image file name for saving output later on
     image_name = img_file
@@ -148,7 +147,7 @@ def get_tables_from_page(img_file):
 
 def get_cell_text(image, cellbbox, i , j):
     cropped_image = image[cellbbox[1]:cellbbox[3], cellbbox[0]:cellbbox[2]]
-    text = pytesseract.image_to_string(cropped_image, lang='eng', config='--psm 6')
+    text = pytesseract.image_to_string(cropped_image, lang=table_recognition_language, config='--psm 6')
     #cv2.imwrite(f"../DEMO/STRUC_ROW_" + str(i) + " " + "COL_" + str(j) + ".jpg", cropped_image)
     return text
 

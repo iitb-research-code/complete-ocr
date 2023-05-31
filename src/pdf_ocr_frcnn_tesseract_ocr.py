@@ -1,5 +1,5 @@
 # How to run
-# python3 pycodes/pdf_to_txt_tesseract_ocr.py test.pdf OUTPUTSETNAME
+# python3 pycodes/pdf_to_txt_tesseract_ocr.py test.pdf OUTPUTSETNAME language ocr_only
 import sys
 try:
     from PIL import Image
@@ -14,11 +14,10 @@ from bs4 import BeautifulSoup
 import time
 import sys
 from table_cellwise_detection import get_final_table_hocrs_from_image
-
+from ocr_config import output_dir
 
 def parse_boolean(b):
     return b == "True"
-
 
 # for simpler filename generation
 def simple_counter_generator(prefix="", suffix=""):
@@ -27,9 +26,8 @@ def simple_counter_generator(prefix="", suffix=""):
         i += 1
         yield 'p'
 
-
 def pdf_to_txt(orig_pdf_path, project_folder_name, lang, ocr_only, pdftoimg):
-    outputDirIn = '../../output_books/'
+    outputDirIn = output_dir
     outputDirectory = outputDirIn + project_folder_name
     print('output directory is ', outputDirectory)
     # create images,text folder
@@ -67,7 +65,6 @@ def pdf_to_txt(orig_pdf_path, project_folder_name, lang, ocr_only, pdftoimg):
         os.environ['OUTPUTDIRECTORY'] = outputDirectory
         # os.environ['CHOSENFILENAMEWITHNOEXT']=chosenFileNameWithNoExt
         # os.system('find $IMAGESFOLDER -maxdepth 1 -type f > $OUTPUTDIRECTORY/tmp.list')
-
         # tessdata_dir_config = r'--tessdata-dir "$/home/sanskar/NLP-Deployment-Heroku/udaan-deploy-pipeline/tesseract-exec/tessdata/"'
         tessdata_dir_config = r'--psm 3 --tessdata-dir "/home/ayush/udaan-deploy-flask/udaan-deploy-pipeline/tesseract-exec/share/tessdata/"'
         tessdata_dir_config = r'--psm 3 --tessdata-dir "/usr/share/tesseract-ocr/4.00/tessdata/"'
@@ -261,5 +258,7 @@ def get_images_from_page_image(model, image, outputDirectory, imfile, pagenumber
 # Function Calls
 input_file= sys.argv[1]
 outputsetname = sys.argv[2]
-pdf_to_txt(input_file, outputsetname, 'eng', True, '')
+lang = sys.argv[3]
+ocr_only = sys.argv[4]
+pdf_to_txt(input_file, outputsetname, lang, ocr_only, '')
 
