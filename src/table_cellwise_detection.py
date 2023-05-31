@@ -36,6 +36,7 @@ def get_cells_from_table(tab, cells):
 
 
 def get_tables_from_page(img_file):
+    full_table_response = []
     # set the computation device
     device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
     # load the model and the trained weights
@@ -50,7 +51,7 @@ def get_tables_from_page(img_file):
         'bkg', 'table', 'cell'
     ]
     # any detection having score below this will be discarded
-    detection_threshold = 0.5
+    detection_threshold = 0.75
 
     # get the image file name for saving output later on
     image_name = img_file
@@ -80,70 +81,68 @@ def get_tables_from_page(img_file):
         draw_boxes = boxes.copy()
         # get all the predicited class names
         pred_classes = [CLASSES[i] for i in outputs[0]['labels'].cpu().numpy()]
-    print('Table Prediction Complete')
+        print('Table Prediction Complete')
 
-    # Trim classes for top k boxes predicted over threshold score
-    classes = pred_classes[:len(boxes)]
+        # Trim classes for top k boxes predicted over threshold score
+        classes = pred_classes[:len(boxes)]
 
-    # Collect table and cells 
-    tables = []
-    cells = []
-    for i in range(len(boxes)):
-        if classes[i] == 'table':
-            tables.append(boxes[i])
-        else:
-            cells.append(boxes[i])
+        # Collect table and cells 
+        tables = []
+        cells = []
+        for i in range(len(boxes)):
+            if classes[i] == 'table':
+                tables.append(boxes[i])
+            else:
+                cells.append(boxes[i])
 
 
-    full_table_response = []
+        for tablebbox in tables:
+        
+            tabcells = get_cells_from_table(tablebbox, cells)
 
-    for tablebbox in tables:
-    
-        tabcells = get_cells_from_table(tablebbox, cells)
+            # Proceed only if table has cells
+            if len(tabcells):
+                # Sort cells based on y coordinates
+                strcells = sorted(tabcells, key=lambda b:b[1]+b[3], reverse=False)
 
-        # Proceed only if table has cells
-        if len(tabcells):
-            # Sort cells based on y coordinates
-            strcells = sorted(tabcells, key=lambda b:b[1]+b[3], reverse=False)
+                # Calculate Mean height
+                cell_heights = [c[3] - c[1] for c in tabcells]
+                mean_height = int(np.mean(cell_heights))
 
-            # Calculate Mean height
-            cell_heights = [c[3] - c[1] for c in tabcells]
-            mean_height = int(np.mean(cell_heights))
+                # Assign row to each cell based on y coordinate wise arrangement 
+                cellrow = [0]
+                assign_row = 0
+                for i in range(len(strcells) - 1):
+                    consec_cell_height = strcells[i + 1][1] - strcells[i][1]
+                    if consec_cell_height > 0.75 * mean_height:
+                        assign_row = assign_row + 1
+                    cellrow.append(assign_row)
 
-            # Assign row to each cell based on y coordinate wise arrangement 
-            cellrow = [0]
-            assign_row = 0
-            for i in range(len(strcells) - 1):
-                consec_cell_height = strcells[i + 1][1] - strcells[i][1]
-                if consec_cell_height > 0.75 * mean_height:
-                    assign_row = assign_row + 1
-                cellrow.append(assign_row)
+                # Get number of rows and columns
+                rows = list(set(cellrow))
+                nrows = len(rows)
+                counts = [0] * nrows
+                for cr in cellrow:
+                    counts[cr] = counts[cr] + 1
+                ncols = max(counts)
 
-            # Get number of rows and columns
-            rows = list(set(cellrow))
-            nrows = len(rows)
-            counts = [0] * nrows
-            for cr in cellrow:
-                counts[cr] = counts[cr] + 1
-            ncols = max(counts)
+                # Generate row-wise cell sequences of bounding boxes
+                cellrows = {}
+                for i in rows:
+                    cells = []
+                    for j in range(len(strcells)):
+                        if i == cellrow[j]:
+                            cells.append(strcells[j])
+                    cells = sorted(cells, key=lambda b:b[0], reverse=False)
+                    cellrows[i] = cells
 
-            # Generate row-wise cell sequences of bounding boxes
-            cellrows = {}
-            for i in rows:
-                cells = []
-                for j in range(len(strcells)):
-                    if i == cellrow[j]:
-                        cells.append(strcells[j])
-                cells = sorted(cells, key=lambda b:b[0], reverse=False)
-                cellrows[i] = cells
-
-            tableresponse = {}
-            tableresponse['bbox'] = tablebbox 
-            tableresponse['nrows'] = nrows
-            tableresponse['ncols'] = ncols
-            tableresponse['ncells'] = len(strcells)
-            tableresponse['cellrows'] = cellrows
-            full_table_response.append(tableresponse)
+                tableresponse = {}
+                tableresponse['bbox'] = tablebbox 
+                tableresponse['nrows'] = nrows
+                tableresponse['ncols'] = ncols
+                tableresponse['ncells'] = len(strcells)
+                tableresponse['cellrows'] = cellrows
+                full_table_response.append(tableresponse)
     
     return full_table_response
 
