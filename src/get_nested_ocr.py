@@ -1,5 +1,5 @@
 # How to run
-# python3 pycodes/pdf_to_txt_tesseract_ocr.py test.pdf OUTPUTSETNAME language ocr_only
+# python3 pycodes/get_nested_ocr.py test.pdf OUTPUTSETNAME language ocr_only
 import sys
 try:
     from PIL import Image
@@ -8,13 +8,18 @@ except ImportError:
 import pytesseract
 import os
 from pdf2image import convert_from_path
-import layoutparser as lp
+# import layoutparser as lp
 import cv2
 from bs4 import BeautifulSoup
 import time
 import sys
-from table_cellwise_detection import get_final_table_hocrs_from_image
-from ocr_config import output_dir
+from doctr.io import DocumentFile
+from doctr.models import ocr_predictor
+from xml.etree import ElementTree as ET
+from xml.etree.ElementTree import Element as ETElement
+from xml.etree.ElementTree import SubElement
+import warnings
+warnings.filterwarnings('ignore')
 
 def parse_boolean(b):
     return b == "True"
@@ -26,8 +31,110 @@ def simple_counter_generator(prefix="", suffix=""):
         i += 1
         yield 'p'
 
+def export_as_xml(self, file_title: str = "docTR - XML export (hOCR)"):
+        """Export the page as XML (hOCR-format)
+        convention: https://github.com/kba/hocr-spec/blob/master/1.2/spec.md
+
+        Args:
+            file_title: the title of the XML file
+
+        Returns:
+            a tuple of the XML byte string, and its ElementTree
+        """
+        p_idx = 1
+        block_count: int = 1
+        line_count: int = 1
+        word_count: int = 1
+        height, width = self.dimensions
+        language = self.language if "language" in self.language.keys() else "en"
+        # Create the XML root element
+        page_hocr = ETElement("html", attrib={"xmlns": "http://www.w3.org/1999/xhtml", "xml:lang": str(language)})
+        # Create the header / SubElements of the root element
+        head = SubElement(page_hocr, "head")
+        SubElement(head, "title").text = file_title
+        SubElement(head, "meta", attrib={"http-equiv": "Content-Type", "content": "text/html; charset=utf-8"})
+        SubElement(
+            head,
+            "meta",
+            attrib={"name": "ocr-system", "content": "python-doctr"},  # type: ignore[attr-defined]
+        )
+        SubElement(
+            head,
+            "meta",
+            attrib={"name": "ocr-capabilities", "content": "ocr_page ocr_carea ocr_par ocr_line ocrx_word"},
+        )
+        # Create the body
+        body = SubElement(page_hocr, "body")
+        SubElement(
+            body,
+            "div",
+            attrib={
+                "class": "ocr_page",
+                "id": f"page_{p_idx + 1}",
+                "title": f"image; bbox 0 0 {width} {height}; ppageno 0",
+            },
+        )
+        # iterate over the blocks / lines / words and create the XML elements in body line by line with the attributes
+        for block in self.blocks:
+            if len(block.geometry) != 2:
+                raise TypeError("XML export is only available for straight bounding boxes for now.")
+            (xmin, ymin), (xmax, ymax) = block.geometry
+            block_div = SubElement(
+                body,
+                "div",
+                attrib={
+                    "class": "ocr_carea",
+                    "id": f"block_{block_count}",
+                    "title": f"bbox {int(round(xmin * width))} {int(round(ymin * height))} \
+                    {int(round(xmax * width))} {int(round(ymax * height))}",
+                },
+            )
+            paragraph = SubElement(
+                block_div,
+                "p",
+                attrib={
+                    "class": "ocr_par",
+                    "id": f"par_{block_count}",
+                    "title": f"bbox {int(round(xmin * width))} {int(round(ymin * height))} \
+                    {int(round(xmax * width))} {int(round(ymax * height))}",
+                },
+            )
+            block_count += 1
+            for line in block.lines:
+                (xmin, ymin), (xmax, ymax) = line.geometry
+                # NOTE: baseline, x_size, x_descenders, x_ascenders is currently initalized to 0
+                line_span = SubElement(
+                    paragraph,
+                    "span",
+                    attrib={
+                        "class": "ocr_line",
+                        "id": f"line_{line_count}",
+                        "title": f"bbox {int(round(xmin * width))} {int(round(ymin * height))} \
+                        {int(round(xmax * width))} {int(round(ymax * height))}; \
+                        baseline 0 0; x_size 0; x_descenders 0; x_ascenders 0",
+                    },
+                )
+                line_count += 1
+                for word in line.words:
+                    (xmin, ymin), (xmax, ymax) = word.geometry
+                    conf = word.confidence
+                    word_div = SubElement(
+                        line_span,
+                        "span",
+                        attrib={
+                            "class": "ocrx_word",
+                            "id": f"word_{word_count}",
+                            "title": f"bbox {int(round(xmin * width))} {int(round(ymin * height))} {int(round(xmax * width))} {int(round(ymax * height))}; x_wconf {int(round(conf * 100))}",
+                        },
+                    )
+                    # set the text
+                    word_div.text = word.value
+                    word_count += 1
+
+        return ET.tostring(page_hocr, encoding="unicode", method="xml")
+
 def pdf_to_txt(orig_pdf_path, project_folder_name, lang, ocr_only, pdftoimg):
-    outputDirIn = output_dir
+    outputDirIn = '../../output_books/'
     outputDirectory = outputDirIn + project_folder_name
     print('output directory is ', outputDirectory)
     # create images,text folder
@@ -113,11 +220,14 @@ def pdf_to_txt(orig_pdf_path, project_folder_name, lang, ocr_only, pdftoimg):
     if pdftoimg == 'pdf2img':
         exit(0)
 
+    # DocTR Model Details
+    doctr_model = ocr_predictor(pretrained=True)
+    
     ### Layout Parser Model Configuration
-    model_config = 'lp://PubLayNet/faster_rcnn_R_50_FPN_3x/config'
-    extra_config = "MODEL.ROI_HEADS.SCORE_THRESH_TEST"
-    label_map = {0: "Text", 1: "Title", 2: "List", 3: "Table", 4: "Figure"}
-    model = lp.Detectron2LayoutModel(model_config, extra_config=[extra_config, 0.8], label_map=label_map)
+    # model_config = 'lp://PubLayNet/faster_rcnn_R_50_FPN_3x/config'
+    # extra_config = "MODEL.ROI_HEADS.SCORE_THRESH_TEST"
+    # label_map = {0: "Text", 1: "Title", 2: "List", 3: "Table", 4: "Figure"}
+    # model = lp.Detectron2LayoutModel(model_config, extra_config=[extra_config, 0.8], label_map=label_map)
     # layout = model.detect(image)
 
     for imfile in os.listdir(imagesFolder):
@@ -131,11 +241,6 @@ def pdf_to_txt(orig_pdf_path, project_folder_name, lang, ocr_only, pdftoimg):
         fullpathimgfile = imagesFolder + '/' + imfile
         #tabledata = get_tables_from_page(fullpathimgfile)
         tabledata = []
-
-        # Write txt files for all pages using Tesseract
-        txt = pytesseract.image_to_string(imagesFolder + "/" + imfile, lang=lang)
-        with open(individualOutputDir + '/' + imfile[:-3] + 'txt', 'w') as f:
-            f.write(txt)
 
         # Hide all tables from images before perfroming recognizing text 
         if len(tabledata) > 0:
@@ -164,10 +269,44 @@ def pdf_to_txt(orig_pdf_path, project_folder_name, lang, ocr_only, pdftoimg):
             # Masked Image will be sent to tesseract
             finalimgtoocr = outputDirectory + "/MaskedImages/" + imfile[:-4] + '_filtered.jpg'
         
-        # Now we detect text using Tesseract
+        # Now we recognize text using Tesseract
         print('We will OCR the image ' + finalimgtoocr)
-        hocr = pytesseract.image_to_pdf_or_hocr(finalimgtoocr, lang=lang, extension='hocr')
-        soup = BeautifulSoup(hocr, 'html.parser')
+        img = cv2.imread(finalimgtoocr)
+        doc = DocumentFile.from_images(finalimgtoocr)
+        result = doctr_model(doc)
+        text_file_content = ''
+        for page in result.pages:
+            height, width = page.dimensions
+            for block in page.blocks:
+                for line in block.lines:
+                    for word in line.words:
+                        ((x1,y1),(x2,y2)) = word.geometry
+                        x1 = int(x1 * width)
+                        x2 = int(x2 * width)
+                        y1 = int(y1 * height)
+                        y2 = int(y2 * height)
+                        bb = ((x1,y1),(x2,y2))
+                        #Crop the block
+                        cropped_image = img[bb[0][1]:bb[1][1], bb[0][0]:bb[1][0]]
+                        #Perform OCR
+                        text = pytesseract.image_to_string(cropped_image, lang=lang)
+                        text_file_content = text_file_content + ' ' + text
+                        word.value = text
+        
+        page_result = result.pages[0]
+        hocr_file_content = export_as_xml(page_result)
+
+        # Write final txt
+        txtfile = individualOutputDir + '/' + imfile[:-3] + 'txt'
+        f = open(txtfile, 'w+')
+        f.write(text_file_content)
+        f.close()
+        
+        # Write final hocrs
+        hocrfile = individualOutputDir + '/' + imfile[:-3] + 'hocr'
+        f = open(hocrfile, 'w+')
+        f.write(hocr_file_content)
+        f.close()
         
         # Adding table hocr in final hocr at proper position
         if len(tabledata) > 0:
@@ -198,14 +337,8 @@ def pdf_to_txt(orig_pdf_path, project_folder_name, lang, ocr_only, pdftoimg):
                         elem.insert_before(img_element)
                         break
 
-        # Write final hocrs
-        hocrfile = individualOutputDir + '/' + imfile[:-3] + 'hocr'
-        f = open(hocrfile, 'w+')
-        f.write(str(soup))
-
 
     # Generate HTMLS in Corrector Output if OCR ONLY
-    ocr_only = True
     if(ocr_only):
         copy_command = 'cp {}/*.hocr {}/'.format(individualOutputDir, outputDirectory + "/CorrectorOutput")
         os.system(copy_command)
