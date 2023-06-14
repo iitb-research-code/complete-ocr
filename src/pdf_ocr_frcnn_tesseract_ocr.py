@@ -129,8 +129,8 @@ def pdf_to_txt(orig_pdf_path, project_folder_name, lang, ocr_only, pdftoimg):
         
         # Get tables from faster rcnn predictions in hocr format
         fullpathimgfile = imagesFolder + '/' + imfile
-        #tabledata = get_tables_from_page(fullpathimgfile)
-        tabledata = []
+        tabledata = get_tables_from_page(fullpathimgfile)
+        # tabledata = []
 
         # Write txt files for all pages using Tesseract
         txt = pytesseract.image_to_string(imagesFolder + "/" + imfile, lang=lang)
@@ -158,8 +158,8 @@ def pdf_to_txt(orig_pdf_path, project_folder_name, lang, ocr_only, pdftoimg):
         # Perform figure detection from page image to get their hocrs and bounding boxes
         img = cv2.imread(imagesFolder + "/" + imfile)
         storeMaskedImages = False
-        #figuredata = get_images_from_page_image(model, img, outputDirectory, imfile, page, storeMaskedImages)
-        figuredata = []
+        figuredata = get_images_from_page_image(model, img, outputDirectory, imfile, page, storeMaskedImages)
+        #figuredata = []
         if len(figuredata) > 0 and storeMaskedImages:
             # Masked Image will be sent to tesseract
             finalimgtoocr = outputDirectory + "/MaskedImages/" + imfile[:-4] + '_filtered.jpg'
