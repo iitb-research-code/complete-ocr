@@ -181,6 +181,9 @@ def pdf_to_txt(orig_pdf_path, project_folder_name, lang, ocr_only, pdftoimg):
                 for elem in soup.find_all('span', class_="ocr_line"):
                     find_all_ele = elem.attrs["title"].split(" ")
                     line_position = int(find_all_ele[2])
+                    if line_position == 0:
+                        elem.insert_before(tab_element)
+                        break
                     if tab_position < line_position:
                         elem.insert_before(tab_element)
                         break
@@ -194,6 +197,9 @@ def pdf_to_txt(orig_pdf_path, project_folder_name, lang, ocr_only, pdftoimg):
                 for elem in soup.find_all('span', class_="ocr_line"):
                     find_all_ele = elem.attrs["title"].split(" ")
                     line_position = int(find_all_ele[2])
+                    if line_position == 0:
+                        elem.insert_before(tab_element)
+                        break
                     if img_position < line_position:
                         elem.insert_before(img_element)
                         break

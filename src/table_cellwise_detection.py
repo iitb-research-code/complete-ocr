@@ -3,9 +3,10 @@ import cv2
 import torch
 import glob as glob
 import torchvision
+from torchvision.ops import nms
 from torchvision.models.detection.faster_rcnn import FastRCNNPredictor
 import pytesseract
-from ocr_config import faster_rcnn_model_path, det_threshold, table_recognition_language, row_determining_threshold, col_determining_threshold
+from ocr_config import *
 
 
 # Returns Faster RCNN model to perfrom table cell-wise detection
@@ -33,6 +34,29 @@ def get_cells_from_table(tab, cells):
         if overlap:
             tablecells.append(c)
     return tablecells
+
+def iou(boxA, boxB):
+    # determine the (x, y)-coordinates of the intersection rectangle
+    xA = max(boxA[0], boxB[0])
+    yA = max(boxA[1], boxB[1])
+    xB = min(boxA[2], boxB[2])
+    yB = min(boxA[3], boxB[3])
+    # compute the area of intersection rectangle
+    interArea = max(0, xB - xA) * max(0, yB - yA)
+    boxAArea = (boxA[2] - boxA[0]) * (boxA[3] - boxA[1])
+    boxBArea = (boxB[2] - boxB[0]) * (boxB[3] - boxB[1])
+    iou = interArea / float(boxAArea + boxBArea - interArea)
+    assert iou >= 0
+    return iou
+
+def perform_nms(boxes, scores, nms_threshold):
+    dets = torch.Tensor(boxes)
+    scores = torch.Tensor(scores)
+    res = nms(dets, scores, nms_threshold)
+    final_boxes =[]
+    for ind in res:
+        final_boxes.append(boxes[ind])
+    return final_boxes
 
 def get_tables_from_page(img_file):
     full_table_response = []
@@ -86,13 +110,26 @@ def get_tables_from_page(img_file):
         classes = pred_classes[:len(boxes)]
 
         # Collect table and cells 
-        tables = []
-        cells = []
+        unfiltered_tables = []
+        unfiltered_cells = []
+        # Collect Scores
+        table_scores = []
+        cell_scores = []
         for i in range(len(boxes)):
             if classes[i] == 'table':
-                tables.append(boxes[i])
+                unfiltered_tables.append(boxes[i])
+                table_scores.append(scores[i])
             else:
-                cells.append(boxes[i])
+                unfiltered_cells.append(boxes[i])
+                cell_scores.append(scores[i])
+
+        tables = []
+        cells = []
+        # Perform NMS to resolve overlap issue
+        if len(unfiltered_tables):
+            tables = perform_nms(unfiltered_tables, table_scores, nms_table_threshold)
+        if len(unfiltered_cells):
+            cells = perform_nms(unfiltered_cells, cell_scores, nms_cell_threshold)
 
         for tablebbox in tables:
         
@@ -214,11 +251,16 @@ def get_hocr_from_table_response(imgfile, tableresponse):
         hocr = hocr + '<tr>'
         for j in range(ncols):
             cell = get_final_cell(tablecellrows, final_skeleton, i, j)
+            if len(cell) == 4:
+                cellbbox = str(cell[0]) + ' ' + str(cell[1]) + ' '  + str(cell[2]) + ' ' + str(cell[3])
+                cellattribute = f' title = "bbox {cellbbox}"'
+            else:
+                cellattribute = ''
             if len(cell) == 0:
                 text = ''
             else :
                 text = get_cell_text(raw_image, cell, lang)
-            hocr = hocr + '<td>' + text + '</td>' 
+            hocr = hocr + f'<td {cellattribute} >' + text + '</td>' 
         hocr = hocr + '</tr>'
     hocr = hocr + '</table>'
     entry = []
@@ -234,5 +276,5 @@ def get_final_table_hocrs_from_image(imgfile):
         full_hocrs_response.append(hocr)
     return full_hocrs_response
 
-img_file = '../DEMO/10.jpg'
-print(get_final_table_hocrs_from_image(img_file))
+# img_file = '../DEMO/12.jpg'
+# print(get_final_table_hocrs_from_image(img_file))
