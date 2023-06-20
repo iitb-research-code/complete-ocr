@@ -12,6 +12,7 @@ Repository contains OCR code for end-to-end outputs from pdfs to hocr outputs of
     Layout parser for images
     Tesseract for text 
     Generates output sets of PDF
+    code for it: src/pdf_ocr_frcnn_tesseract_ocr.py
 #### Nested-ocr
     DocTR for detection of blocks, lines and words
     Tesseract for multilingual recognition and hocr generation
@@ -23,3 +24,5 @@ Repository contains OCR code for end-to-end outputs from pdfs to hocr outputs of
 
     Further utilization
     Results can be exported in the format to be read on Udaan Tool Useful for translation and other downstream applications
+
+    Code for it: src/get_nested_ocr.py
