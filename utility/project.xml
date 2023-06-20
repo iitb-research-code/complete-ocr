@@ -1,0 +1,28 @@
+<?xml version="1.0"?>
+<Project name="Book1">
+	<ItemGroup>
+		<Filter Include="Image">
+			<Extensions>jpeg;jpg;png;</Extensions>
+		</Filter>
+		<Filter Include="CorrectorOutput">
+			<Extensions>docx;txt;html</Extensions>
+		</Filter>
+		<Filter Include="VerifierOutput">
+			<Extensions>docx;txt;html</Extensions>
+		</Filter>
+		<Filter Include="Document">
+			<Extensions>docx;txt;html</Extensions>
+		</Filter>
+	</ItemGroup>
+	<Configuration>
+		<Prefixmatch>True</Prefixmatch>
+	</Configuration>
+	<Metadata>
+		<Version>1</Version>
+		<Stage>Verifier</Stage>
+		<Corrector>None</Corrector>
+		<SanityChecker>None</SanityChecker>
+		<Verifier>None</Verifier>
+		
+	</Metadata>
+</Project>
