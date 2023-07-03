@@ -26,3 +26,11 @@ Repository contains OCR code for end-to-end outputs from pdfs to hocr outputs of
     Results can be exported in the format to be read on Udaan Tool Useful for translation and other downstream applications
 
     Code for it: src/get_nested_ocr.py
+
+
+### Installation Steps
+
+```
+pip install -r requirements.txt
+pip install "detectron2@git+https://github.com/facebookresearch/detectron2.git@v0.5#egg=detectron2"
+```
