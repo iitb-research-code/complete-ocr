@@ -1,5 +1,4 @@
 import os
-import sys
 import cv2
 import time
 import argparse
@@ -12,7 +11,7 @@ from bs4 import BeautifulSoup
 
 
 # from table_cellwise_detection import get_final_table_hocrs_from_image
-from src.config import OUTPUT_DIR, jpg_options, tessdata_dir_config, directories, model_config, label_map, extra_config, storeMaskedImages
+from src.config import *
 from src.utils import get_final_table_hocrs_from_image
 
 warnings.filterwarnings('ignore')
@@ -20,17 +19,8 @@ warnings.filterwarnings('ignore')
 
 # for simpler filename generation
 def simple_counter_generator(prefix="", suffix=""):
-    i = 400
     while True:
-        i += 1
         yield 'p'
-
-
-def get_tables_from_page(img_file):
-    # Return list of table HOCR and bbox here
-    result = get_final_table_hocrs_from_image(img_file)
-    # print(str(img_file) + ' has ' + str(len(result)) + ' tables extracted')
-    return result
 
 
 def get_images_from_page_image(model, image, outputDirectory, pagenumber):
@@ -55,11 +45,9 @@ def get_images_from_page_image(model, image, outputDirectory, pagenumber):
 
 def pdf_to_txt(args):
 
-    outputDirectory = OUTPUT_DIR + args.outputsetname
+    outputDirectory = os.path.join(OUTPUT_DIR, args.outputsetname)
     imagesFolder    = os.path.join(outputDirectory,'Images')
     print('Output Directory is :', outputDirectory)
-
-
 
     print("Creating Directories for storing OCR data")
     for directory in directories:
@@ -71,17 +59,19 @@ def pdf_to_txt(args):
                     pass
 
 
-    print("converting pdf to images")
+    print("Converting PDF to Images")
 
     output_file = simple_counter_generator("page", ".jpg")
+    print(output_file)
     convert_from_path(args.input_file, output_folder=imagesFolder, dpi=300, fmt='jpeg', jpegopt= jpg_options, output_file=output_file)
 
-    print("images created.")
+    print("Images Creation Done",end='\n\n')
 
 
     model = lp.Detectron2LayoutModel(model_config, extra_config=[extra_config, 0.8], label_map=label_map)
 
 
+    print("***** Starting OCR Engine *****")
     startTime = time.time()
 
     for imgfile in os.listdir(imagesFolder):
@@ -98,7 +88,7 @@ def pdf_to_txt(args):
             f.write(txt)
 
         
-        tabledata = get_tables_from_page(img_path)
+        tabledata = get_final_table_hocrs_from_image(img_path)
         # Hide all tables from images before perfroming recognizing text 
         if len(tabledata) > 0:
             for entry in tabledata:

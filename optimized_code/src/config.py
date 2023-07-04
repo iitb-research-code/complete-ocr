@@ -1,5 +1,5 @@
 
-OUTPUT_DIR = './../output_books/'
+OUTPUT_DIR = './../../output_books/'
 
 jpg_options = {
     "quality"    : 100,
@@ -20,7 +20,7 @@ tessdata_dir_config = r'--tessdata-dir "./../../tessdata/"'
 
 
 # Table OCR Related Properties
-model_path = './../models/rcnn_model500.pth'
+model_path = './../../models/rcnn_model500.pth'
 det_threshold = 0.5
 table_recognition_language = 'eng'
 row_determining_threshold = 0.6667
