@@ -1,6 +1,7 @@
 import os
 import cv2
 import time
+import shutil
 import argparse
 import warnings
 import pytesseract
@@ -8,6 +9,7 @@ import layoutparser as lp
 
 from pdf2image import convert_from_path
 from bs4 import BeautifulSoup
+from tqdm import tqdm
 
 
 # from table_cellwise_detection import get_final_table_hocrs_from_image
@@ -61,9 +63,10 @@ def pdf_to_txt(args):
 
     print("Converting PDF to Images")
 
-    output_file = simple_counter_generator("page", ".jpg")
-    print(output_file)
-    convert_from_path(args.input_file, output_folder=imagesFolder, dpi=300, fmt='jpeg', jpegopt= jpg_options, output_file=output_file)
+
+    if len(os.listdir(imagesFolder))==0:
+        output_file = simple_counter_generator("page", ".jpg")
+        convert_from_path(args.input_file, output_folder=imagesFolder, dpi=300, fmt='jpeg', jpegopt= jpg_options, output_file=output_file)
 
     print("Images Creation Done",end='\n\n')
 
@@ -73,8 +76,9 @@ def pdf_to_txt(args):
 
     print("***** Starting OCR Engine *****")
     startTime = time.time()
+    sorted_img_files = sorted(os.listdir(imagesFolder))
 
-    for imgfile in os.listdir(imagesFolder):
+    for imgfile in tqdm(sorted_img_files):
 
         img_path = os.path.join(imagesFolder, imgfile)
         img = cv2.imread(img_path)
@@ -148,15 +152,13 @@ def pdf_to_txt(args):
 
 
     # Generate HTMLS in Corrector Output if OCR ONLY
-    ocr_only = True
-    if(ocr_only):
-        copy_command = 'cp {}/*.hocr {}/'.format(outputDirectory + '/Inds', outputDirectory + "/CorrectorOutput")
-        os.system(copy_command)
-        correctorFolder = outputDirectory + "/CorrectorOutput"
-        for hocrfile in os.listdir(correctorFolder):
+    if(args.ocr_only):
+        corrector_output_dir = outputDirectory + "/CorrectorOutput"
+        shutil.copytree(outputDirectory + '/Inds', corrector_output_dir, dirs_exist_ok=True)
+        for hocrfile in os.listdir(corrector_output_dir):
             if "hocr" in hocrfile:
                 htmlfile = hocrfile.replace(".hocr", ".html")
-                os.rename(correctorFolder + '/' + hocrfile, correctorFolder + '/' + htmlfile)
+                os.rename(corrector_output_dir + '/' + hocrfile, corrector_output_dir + '/' + htmlfile)
 
     
     # Calculate the time elapsed for entire OCR process
