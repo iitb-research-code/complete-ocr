@@ -16,11 +16,11 @@ label_map = {0: "Text", 1: "Title", 2: "List", 3: "Table", 4: "Figure"}
 
 storeMaskedImages = True
 
-tessdata_dir_config = r'--tessdata-dir "./../../tessdata/"'
+tessdata_dir_config = r'--tessdata-dir "./../../../tessdata/"'
 
 
 # Table OCR Related Properties
-model_path = './../../models/rcnn_model500.pth'
+model_path = './../../models/table_detection_model.pth'
 det_threshold = 0.5
 table_recognition_language = 'eng'
 row_determining_threshold = 0.6667
