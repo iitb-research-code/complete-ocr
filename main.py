@@ -89,8 +89,8 @@ def get_hocr(json_data):
                 hocr_content.append(f'<span class="ocr_line" title="bbox {line_geometry[0][0]} {line_geometry[0][1]} {line_geometry[1][0]} {line_geometry[1][1]}">')
                 for word in line['words']:
                     word_geometry = word['geometry']
-                    word_bbox = f'bbox {word_geometry[0][0]} {word_geometry[0][1]} {word_geometry[1][0]} {word_geometry[1][1]}'
-                    word_text = f'x_wconf {word["confidence"]:.2f} {word["value"]}'
+                    word_bbox = f'bbox {word_geometry[0][0]} {word_geometry[0][1]} {word_geometry[1][0]} {word_geometry[1][1]} x_wconf {word["confidence"]:.2f}'
+                    word_text = f'{word["value"]}'
                     word_hocr = f'<span class="ocrx_word" title="{word_bbox}">{word_text}</span>'
                     hocr_content.append(word_hocr)
                 hocr_content.append('</span>')
@@ -163,9 +163,9 @@ def pdf_to_txt(orig_pdf_path, project_folder_name, language_model, ocr_only, is_
     os.system('cp ' + os.path.join(RESOURCES_DIR, 'dicts/') + '* '+ output_directory+"/Dicts/")
 
     # if input type is images, then copy the images to the output directory
+    output_file=simple_counter_generator("page",".jpg")
     if IMAGE_CONVERT_OPTION and args.input_type == 'pdf' and len(os.listdir(images_folder))==0:
-        print('Converting PDF to Images')
-        output_file=simple_counter_generator("page",".jpg")
+        print('Converting PDF to Images')  
         convert_from_path(orig_pdf_path ,output_folder=images_folder, dpi=DPI,fmt='jpeg',jpegopt=JPEGOPT,output_file=output_file)
         print("Images Creation Done.")
     elif args.input_type == 'images':
@@ -236,7 +236,6 @@ def parse_args():
     parser.add_argument("-d", "--debug", dest="debug", action="store_true", help="debug mode")
     args = parser.parse_args()
     return args
-
 
 
 

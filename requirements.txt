@@ -1,4 +1,6 @@
 pytesseract
 pdf2image
 bs4
-opencv-python
+python-doctr
+python-doctr[torch]
+rapidfuzz==2.15.1
