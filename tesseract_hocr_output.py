@@ -120,8 +120,7 @@ def hocr_output(file):
   # saving the hocr output
   with open(f"{file.split('/')[-1].split('.')[0]}_hocr_output.html",'w') as file:
     file.write(html)
-  # return tags
 
 
 #  to run the program insert the file path
-hocr_output('/content/drive/MyDrive/Layout_Analysis_Data/PDFs/BCC_BR_115_434.pdf')
+# run this hocr_output(<your file path>)
