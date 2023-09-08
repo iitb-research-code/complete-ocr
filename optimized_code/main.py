@@ -79,7 +79,7 @@ def hocr_output(file,language):
     body=''
 
     #  getting the tesseract objects
-    result=get_tesseract_objs(file,lang=language)
+    result=get_tesseract_objs(file,language)
 
     # making the hocr output
     # bbox = [ xmin , ymin , xmax , ymax , type , list of words]
