@@ -1,8 +1,30 @@
 OUTPUT_DIR = './output_books/'
 RESOURCES_DIR = './resources/'
 
+jpg_options = {
+    "quality"    : 100,
+    "progressive": True,
+    "optimize"   : False
+}
 
-DIRECTORIES = ['Images','CorrectorOutput', 'Comments', 'Inds', 'Dicts', 'ProcessedImages', 'VerifierOutput']
+
+model_config = 'lp://PubLayNet/faster_rcnn_R_50_FPN_3x/config'
+extra_config = "MODEL.ROI_HEADS.SCORE_THRESH_TEST"
+label_map = {0: "Text", 1: "Title", 2: "List", 3: "Table", 4: "Figure"}
+
+storeMaskedImages = True
+
+# Table OCR Related Properties
+model_path = './../../models/table_detection_model.pth'
+det_threshold = 0.5
+table_recognition_language = 'eng'
+row_determining_threshold = 0.6667
+col_determining_threshold = 0.5
+nms_table_threshold = 0.1
+nms_cell_threshold = 0.0001
+
+
+DIRECTORIES = ['Images','CorrectorOutput', 'Comments', 'Inds', 'Dicts', 'ProcessedImages', 'VerifierOutput', 'MaskedImages']
 
 
 TESSDATA_DIR_CONFIG = '--oem 3 --psm 6'# --tessdata-dir "/home/ayush/udaan-deploy-flask/udaan-deploy-pipeline/tesseract-exec/share/tessdata/"'
