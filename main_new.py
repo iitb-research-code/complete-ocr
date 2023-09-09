@@ -319,8 +319,8 @@ def pdf_to_txt(orig_pdf_path, project_folder_name, language_model, ocr_only, is_
                         elem.insert_before(tab_element)
                         break
 
-        with open(ProcessedOutput + img_file[:-3] + 'hocr', 'w+b') as f:
-            f.write(hocr)
+        with open(ProcessedOutput + img_file[:-3] + 'html', 'w') as f:
+            f.write(str(soup))
     
     
     endTIme = time.time()
