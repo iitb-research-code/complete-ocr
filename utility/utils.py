@@ -241,10 +241,10 @@ def get_hocr_from_table_response(imgfile, tableresponse):
     ncols = max(max_entries_per_row)  + 1
     # print(final_skeleton)
     # print("Rows => " + str(nrows))
-    # print("Cols => " + str(ncols))
+    # print("Cols => " + str(ncols)) 
 
     # HOCR Generation
-    hocr = '<table class="ocr_tab" border=1 style="margin: 0px auto; text-align: center;"'
+    hocr = f'<table class="ocr_tab" border=1 style="position:absolute;top: {str(tablebbox[1])}px;left: {str(tablebbox[0])}px;"'
     tabbbox = " ".join(tablebbox.astype(str))
     hocr = hocr + f' title = "bbox {tabbbox}" >'
     for i in range(nrows):
@@ -276,5 +276,5 @@ def get_final_table_hocrs_from_image(imgfile):
         full_hocrs_response.append(hocr)
     return full_hocrs_response
 
-# img_file = '../DEMO/12.jpg'
-# print(get_final_table_hocrs_from_image(img_file))
+img_file = 'complete-ocr_doctr/BCC_BR_115_4341.jpg'
+print(get_final_table_hocrs_from_image(img_file))

@@ -82,7 +82,6 @@ def doctr_get_hocr(json_data):
     hocr_content = []
     for page in json_data['pages']:
         y,x=page['dimensions']
-        print(y,x)
         hocr_content.append(f'\t<div class="ocr_page">\n')
         for block in page['blocks']:
             block_geometry = block['geometry']
@@ -90,7 +89,6 @@ def doctr_get_hocr(json_data):
             for line in block['lines']:
                 line_geometry = line['geometry']
                 hocr_content.append(f'\t\t\t<span class="ocr_line" title="bbox {str(int(line_geometry[0][0]*x))} {str(int(line_geometry[0][1]*y))} {str(int(line_geometry[1][0]*x))} {str(int(line_geometry[1][1]*y))}" style="position:absolute;top: {str(int(line_geometry[0][1]*y))}px;left: {str(int(line_geometry[0][0]*x))}px;">\n')
-                print(f'<span class="ocr_line" title="bbox {str(int(line_geometry[0][0]*x))} {str(int(line_geometry[0][1]*y))} {str(int(line_geometry[1][0]*x))} {str(int(line_geometry[1][1]*y))}" style="position:absolute;top: {str(int(line_geometry[0][1]*y))}px;left: {str(int(line_geometry[0][0]*x))}px;">\n')
                 for word in line['words']:
                     word_geometry = word['geometry']
                     word_bbox = f'bbox {str(int(word_geometry[0][0]*x))} {str(int(word_geometry[0][1]*y))} {str(int(word_geometry[1][0]*x))} {str(int(word_geometry[1][1]*y))} x_wconf {word["confidence"]:.2f}'
@@ -109,7 +107,7 @@ def doctr_get_hocr(json_data):
     <meta charset="UTF-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title></title>
+    <title>Output</title>
 </head>
 <body>
 {" ".join(hocr_content)}
@@ -142,17 +140,10 @@ def handwritten_ocr(image_path, predictor, file_path):
             file.write(line)
 
     hocr = doctr_get_hocr(result.export())
-    # soup = BeautifulSoup(hocr, 'html.parser')
-
-    # prettified_hocr = soup.prettify()
-
-    # with open(file_path[:-3] + 'hocr', "w", encoding="utf-8") as output_file:
-    #     output_file.write(prettified_hocr)
     return hocr
 
 # to get the tesseract output's objects
-def get_tesseract_objs(img_path,language,cf):
-  img=cv2.imread(img_path)
+def get_tesseract_objs(img,language,cf):
   tesseract_output=pytesseract.image_to_data(img,lang=language,config=cf).split('\n')
   words=[]
   for row in tesseract_output:
@@ -196,17 +187,14 @@ def get_tesseract_objs(img_path,language,cf):
       for line in line_dict[block][para].keys():
         word=line_dict[block][para][line]
         objs.append([word[0],word[1],word[2]+word[0],word[3]+word[1],'Text',word[4]])
-        print([word[0],word[1],word[2]+word[0],word[3]+word[1],'Text',word[4]])
   objs=sorted(objs,key=lambda x:x[1])
   return objs
 
-
-# to generate the hocr output from the tesseract outputs
-def tesseract_get_hocr(file,language,cf):
+def tesseract_get_hocr(img,language,cf):
     body=''
 
     #  getting the tesseract objects
-    result=get_tesseract_objs(file,language,cf)
+    result=get_tesseract_objs(img,language,cf)
 
     # making the hocr output
     # bbox = [ xmin , ymin , xmax , ymax , type , list of words]
@@ -223,7 +211,7 @@ def tesseract_get_hocr(file,language,cf):
   <meta charset="UTF-8">
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>{file.split('/')[-1].split('.')[0]}</title>
+  <title>Output"</title>
 </head>
 <body>
 {body}
@@ -308,7 +296,7 @@ def pdf_to_txt(orig_pdf_path, project_folder_name, language_model, ocr_only, is_
         gray_image = image.convert('L')
 
         if(is_handwritten):
-             hocr=handwritten_ocr(img_path, predictor, individual_output_dir + img_file[:-3] + 'txt')
+            hocr=handwritten_ocr(img_path, predictor, individual_output_dir + img_file[:-3] + 'txt')
         else:
             txt, hocr = printed_ocr(gray_image, language_model)
 
