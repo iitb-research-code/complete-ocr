@@ -6,7 +6,7 @@ import torchvision
 from torchvision.ops import nms
 from torchvision.models.detection.faster_rcnn import FastRCNNPredictor
 import pytesseract
-from config import *
+from utility.config import *
 
 
 # Returns Faster RCNN model to perfrom table cell-wise detection
@@ -275,6 +275,3 @@ def get_final_table_hocrs_from_image(imgfile):
         hocr = get_hocr_from_table_response(imgfile, table_response)
         full_hocrs_response.append(hocr)
     return full_hocrs_response
-
-img_file = 'complete-ocr_doctr/BCC_BR_115_4341.jpg'
-print(get_final_table_hocrs_from_image(img_file))

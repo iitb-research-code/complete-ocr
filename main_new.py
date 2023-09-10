@@ -211,7 +211,7 @@ def tesseract_get_hocr(img,language,cf):
   <meta charset="UTF-8">
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Output"</title>
+  <title>Output</title>
 </head>
 <body>
 {body}
@@ -236,6 +236,7 @@ def pdf_to_txt(orig_pdf_path, project_folder_name, language_model, ocr_only, is_
     output_directory = os.path.join(OUTPUT_DIR, project_folder_name)
     images_folder = os.path.join(output_directory, "Images")
     print('Output Directory is :', output_directory)
+    print('images_folder: ',images_folder)
 
     print('Creating Directories for storing OCR outputs and data')
     for directory in DIRECTORIES:
@@ -256,7 +257,8 @@ def pdf_to_txt(orig_pdf_path, project_folder_name, language_model, ocr_only, is_
         convert_from_path(orig_pdf_path ,output_folder=images_folder, dpi=DPI,fmt='jpeg',jpegopt=JPEGOPT,output_file=output_file)
         print("Images Creation Done.")
     elif args.input_type == 'images':
-        shutil.copytree(args.input_file, images_folder)
+        shutil.copytree(args.orig_pdf_path, images_folder)
+
 
     print(" *** STARTING OCR ENGINE *** ")
     print("Selected language model :", language_model)
@@ -282,7 +284,9 @@ def pdf_to_txt(orig_pdf_path, project_folder_name, language_model, ocr_only, is_
         img=cv2.imread(img_path)
 
         #  getting the tables
+        print('Performing Table Detection',end=' ')
         tabledata = get_final_table_hocrs_from_image(img_path)
+        print('Table Detection Done')
         # Hide all tables from images before perfroming recognizing text 
         if len(tabledata) > 0:
             for entry in tabledata:
@@ -336,7 +340,7 @@ def pdf_to_txt(orig_pdf_path, project_folder_name, language_model, ocr_only, is_
         os.system(rename_command)
         print('Corrector Output Generated')
 
-    print('OCR Engine Completed Successfully')
+    print('OCR Engine Completed Successfully , The Text Outputs Are In /Inds and Hocr Outputs IN /ProcessedImages')
 
 def parse_args():
     parser = argparse.ArgumentParser(description="Documents OCR Input Arguments", formatter_class=argparse.ArgumentDefaultsHelpFormatter)
@@ -361,3 +365,4 @@ def parse_args():
 if __name__ == "__main__":
     args = parse_args()
     pdf_to_txt(args.orig_pdf_path, args.project_folder_name, args.language_model, args.ocr_only, args.ocr_method)
+# pdf_to_txt('BCC_BR_115_434.pdf','output_set','eng',False)
