@@ -365,4 +365,3 @@ def parse_args():
 if __name__ == "__main__":
     args = parse_args()
     pdf_to_txt(args.orig_pdf_path, args.project_folder_name, args.language_model, args.ocr_only, args.ocr_method)
-# pdf_to_txt('BCC_BR_115_434.pdf','output_set','eng',False)
