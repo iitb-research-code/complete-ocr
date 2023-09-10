@@ -12,8 +12,7 @@ pip install "detectron2@git+https://github.com/facebookresearch/detectron2.git@v
 
 # Run The OCR Engine
 ```
-python main.py -i <INPUT_FILE>/
--it <INPUT_TYPE> -o <PROJECT_FOLDER_NAME> -l <LANGUAGE_MODEL> -t <OCR_METHOD: True IF HANDWRITTEN , False IF PRINTED > -c <OCR_ONLY : True or False>
+python main.py -i <INPUT_FILE> -it <INPUT_TYPE> -o <PROJECT_FOLDER_NAME> -l <LANGUAGE_MODEL> -t <OCR_METHOD: True IF HANDWRITTEN , False IF PRINTED > -c <OCR_ONLY : True or False>
 ```
 For Further Help run
 ```
