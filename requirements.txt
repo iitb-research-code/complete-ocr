@@ -1,8 +1,5 @@
-pillow==9.2
 pytesseract
+pillow
 pdf2image
-layoutparser
-bs4
-torch
-torchvision
-opencv-python
+tqdm
+pandas
