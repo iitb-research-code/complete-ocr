@@ -1,0 +1,5 @@
+__pycache__
+input_books/
+env/
+output_books/
+errors/

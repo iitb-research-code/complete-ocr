@@ -2,7 +2,7 @@ OUTPUT_DIR = './output_books/'
 RESOURCES_DIR = './resources/'
 
 
-DIRECTORIES = ['Images','CorrectorOutput', 'Comments', 'Inds', 'Dicts', 'ProcessedImages', 'VerifierOutput']
+DIRECTORIES = ['Images','CorrectorOutput', 'Comments', 'Inds', 'Dicts', 'ProcessedImages', 'VerifierOutput', 'Cropped_Images']
 
 
 TESSDATA_DIR_CONFIG = '--oem 3 --psm 6'# --tessdata-dir "/home/ayush/udaan-deploy-flask/udaan-deploy-pipeline/tesseract-exec/share/tessdata/"'
@@ -81,3 +81,6 @@ MODEL = {
     "ory": "odia",
     "nep": "hindi",
 }
+
+LPMODEL_JSON="./resources/lpmodelv2.json"
+LPMODEL_WEIGHTS="./resources/lpmodelv2_weights.h5"
