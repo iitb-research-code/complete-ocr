@@ -309,7 +309,7 @@ def pdf_to_txt(orig_pdf_path, project_folder_name, language_model, ocr_only, is_
             # soup = BeautifulSoup(hocr, "html.parser")
 
             # TextAttributes Code
-            ta = TextAttributes(img_path, ocr_engine='tesseract')
+            ta = TextAttributes([img_path], ocr_engine='tesseract')
             result = ta.generate(hocr,output_type='hocr')
 
             # Write final hocrs

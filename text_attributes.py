@@ -20,7 +20,7 @@ class TextAttributes:
         Tesseract - Bold(Automatic), Color, Font Size
     """
 
-    def __init__(self,image: str,ocr_engine: str, thres: float = 0.3, k_size: int = 4)-> None: 
+    def __init__(self,images: list[str],ocr_engine: str, thres: float = 0.3, k_size: int = 4)-> None: 
         """
         Initializes a text attribute generator.
         
@@ -32,14 +32,14 @@ class TextAttributes:
         """
 
         self.ocr_engine = ocr_engine
-        self.inp_images = cv2.imread(image).astype("uint8")
+        self.images = [cv2.imread(img).astype("uint8") for img in images]
         self.thres = thres
         self.k_size = k_size
-        self.bin_images = self.binarize(self.inp_images)
+        self.bin_images = [self.binarize(image) for image in self.images]
         if self.ocr_engine == 'doctr':
             self.processed_images = [self.morph_open(image, self.k_size) for image in self.bin_images]
         else:
-            self.processed_images = None
+            self.processed_images = [None for image in self.bin_images]
 
     def generate(self,ocr_output,output_type: str)->str|dict:
         """
@@ -50,7 +50,7 @@ class TextAttributes:
             output_type: required output_type ('hocr'/'json')
         """
         
-        if type(self.processed_images)==type(None) and self.ocr_engine == 'tesseract':
+        if type(self.processed_images[0])==type(None) and self.ocr_engine == 'tesseract':
             self.process_images_with_sizes(ocr_output)
 
         if self.ocr_engine == 'tesseract' and output_type == 'hocr':
@@ -74,7 +74,7 @@ class TextAttributes:
                 for l,line in enumerate(block["lines"]):
                     for w,word in enumerate(line["words"]):
 
-                        word_img = self.get_image(self.inp_images[p],page["dimensions"],word["geometry"])
+                        word_img = self.get_image(self.images[p],page["dimensions"],word["geometry"])
                         bin_reg = self.get_image(self.bin_images[p],page["dimensions"],word["geometry"])
                         processed_reg = self.get_image(self.processed_images[p],page["dimensions"],word["geometry"])
 
@@ -103,7 +103,7 @@ class TextAttributes:
                         word_bbox = f'bbox {word_geometry[0][0]} {word_geometry[0][1]} {word_geometry[1][0]} {word_geometry[1][1]} x_wconf {word["confidence"]:.2f}'
                         word_text = f'{word["value"]}'
 
-                        word_img = self.get_image(self.inp_images[p], page["dimensions"], word_geometry)
+                        word_img = self.get_image(self.images[p], page["dimensions"], word_geometry)
                         bin_reg = self.get_image(self.bin_images[p], page["dimensions"], word_geometry)
                         processed_reg = self.get_image(self.processed_images[p], page["dimensions"], word_geometry)
 
@@ -123,7 +123,6 @@ class TextAttributes:
         return complete_hocr
 
     def parse_tesseract_to_hocr(self,hocr):
-        print("Running parse_tesseract_to_hocr")
         """Returns hocr with text attributes from tesseract output"""
 
         soup = BeautifulSoup(hocr, 'html.parser')
@@ -138,7 +137,7 @@ class TextAttributes:
                             bbox,conf = word.get("title").split(";")
                             x1,y1,x2,y2 = map(int,bbox.split()[1:])
 
-                            word_img = self.inp_images[p][y1:y2,x1:x2]
+                            word_img = self.images[p][y1:y2,x1:x2]
                             bin_reg = self.bin_images[p][y1:y2,x1:x2]
                             processed_reg = self.processed_images[p][y1:y2,x1:x2]
 
@@ -173,7 +172,7 @@ class TextAttributes:
                             bbox,conf = word.get("title").split(";")
 
                             x1,y1,x2,y2 = map(int,bbox.split()[1:])
-                            word_img = self.inp_images[p][y1:y2,x1:x2]
+                            word_img = self.images[p][y1:y2,x1:x2]
                             bin_reg = self.bin_images[p][y1:y2,x1:x2]
                             processed_reg = self.processed_images[p][y1:y2,x1:x2]
 
@@ -194,9 +193,7 @@ class TextAttributes:
         return json_out
 
     def process_images_with_sizes(self,hocr):
-        print("Running process_images_with_sizes")
         """Perform Morphological Opening with dynamic kernel sizes according to font sizes"""
-        # print(hocr)
 
         soup = BeautifulSoup(hocr, 'html.parser')
         sizes = []
