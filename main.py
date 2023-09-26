@@ -283,7 +283,7 @@ def pdf_to_txt(orig_pdf_path, project_folder_name, language_model, ocr_only, is_
                 elif l[4] == "Image" or l[4] == "Table":
                     crp = img[l[1] : l[3], l[0] : l[2]]
                     if not cv2.imwrite(f"{cropped_figures_folder}figure_{index}.jpg", crp):
-                        raise Exception(f"Could not write image")
+                        raise Exception(f"Could not write image at {cropped_figures_folder}")
                     i = f'<img src="../Cropped_Images/figure_{index}.jpg"> '
                     div += i
                 div += "</div>\n"
