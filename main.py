@@ -40,7 +40,7 @@ from bs4 import BeautifulSoup
 
 from utility.config import *
 
-
+from text_attributes import TextAttributes
 
 
 ### For parsing boolean from string
@@ -125,7 +125,8 @@ def handwritten_ocr(image_path, predictor, file_path):
         for line in final_values:
             file.write(line)
 
-    hocr = get_hocr(result.export())
+    ta = TextAttributes([image_path], 'doctr', thres=args.bold_threshold, k_size=args.kernel_size)
+    hocr = ta.generate(result.export(),"hocr")
     soup = BeautifulSoup(hocr, 'html.parser')
     prettified_hocr = soup.prettify()
 
@@ -134,11 +135,12 @@ def handwritten_ocr(image_path, predictor, file_path):
 
 
 
-
 ### Printed OCR using Tesseract
-def printed_ocr(gray_image, language_model):
+def printed_ocr(img_path,gray_image, language_model):
     txt = pytesseract.image_to_string(gray_image, lang=language_model, config=TESSDATA_DIR_CONFIG)
     hocr = pytesseract.image_to_pdf_or_hocr(gray_image, lang=language_model, extension='hocr', config=TESSDATA_DIR_CONFIG)
+    ta = TextAttributes(images=[img_path],ocr_engine="tesseract",thres=args.bold_threshold)
+    hocr = ta.generate(hocr,"hocr")
     return txt, hocr
 
 
@@ -196,7 +198,7 @@ def pdf_to_txt(orig_pdf_path, project_folder_name, language_model, ocr_only, is_
         if(is_handwritten):
              handwritten_ocr(img_path, predictor, individual_output_dir + img_file[:-3] + 'txt')
         else:
-            txt, hocr = printed_ocr(gray_image, language_model)
+            txt, hocr = printed_ocr(img_path,gray_image, language_model)
 
             with open(individual_output_dir +img_file[:-3] + 'txt', 'w') as f:
                 f.write(txt)
@@ -229,6 +231,9 @@ def parse_args():
     parser.add_argument("-l", "--language_model", type=str, default="Devangari", help="language to be used for OCR")
     parser.add_argument("-t", "--ocr_method", dest="ocr_method", action="store_true", help="OCR method : Printed/Handwritten, True if Handwritten")
     parser.add_argument("-c", "--ocr_only", dest="ocr_only", action="store_true", help="OCR only mode, stores True/False")
+    parser.add_argument("-b", "--bold_threshold",type=float,default=0.3, help="Threshold for bold classification. Lower means more sensitive")
+    parser.add_argument("-k", "--kernel_size",type=int,default=4, help="Kernel Size. Lower for smaller font. Only for Handwritten")
+
     
     # Not needed for now
     parser.add_argument("-p", "--preprocess", type=str, default="thresh", help="type of preprocessing to be done")

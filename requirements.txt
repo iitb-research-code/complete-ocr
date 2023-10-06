@@ -4,3 +4,8 @@ bs4
 python-doctr
 python-doctr[torch]
 rapidfuzz==2.15.1
+opencv-python
+scikit-learn
+beautifulsoup4
+scikit-image
+scipy
