@@ -40,7 +40,7 @@ from doctr.models.detection.predictor import DetectionPredictor
 from doctr.models.recognition.predictor import RecognitionPredictor
 from doctr.models.preprocessor import PreProcessor
 
-from text_attributes import TextAttributes
+# from text_attributes import TextAttributes
 
 from utility.config import *
 from figureDetection import *
@@ -266,6 +266,7 @@ def pdf_to_txt(orig_pdf_path, project_folder_name, language_model, ocr_only, is_
             img = cv2.imread(img_path)
             tags = ""
             temp = 0
+            depth = 0
             for index, l in enumerate(result):
                 # print(l)
                 div = f"\t\t\t<div class='ocr_carea' style='position:absolute;width:{str(l[2]-l[0])}px;top: {str(depth+l[1])}px;left: {str(l[0])}px;'>"
@@ -306,16 +307,16 @@ def pdf_to_txt(orig_pdf_path, project_folder_name, language_model, ocr_only, is_
         {tags}
       </body>
     </html>"""
-            # soup = BeautifulSoup(hocr, "html.parser")
+            soup = BeautifulSoup(hocr, "html.parser")
 
             # TextAttributes Code
-            ta = TextAttributes([img_path], ocr_engine='tesseract')
-            result = ta.generate(hocr,output_type='hocr')
+            # ta = TextAttributes([img_path], ocr_engine='tesseract')
+            # result = ta.generate(hocr,output_type='hocr')
 
             # Write final hocrs
             hocrfile = individual_output_dir + img_file[:-3] + 'hocr'
             f = open(hocrfile, "w+")
-            f.write(str(result))
+            f.write(str(soup))
             # txt, hocr = printed_ocr(gray_image, language_model) Give tesseract ocr the image
 
             # with open(individual_output_dir +img_file[:-3] + 'txt', 'w') as f:
