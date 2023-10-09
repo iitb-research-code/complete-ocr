@@ -171,36 +171,38 @@ def get_tesseract_objs(result1, img_path, lang):
             y = int(text[7])
             w = int(text[8])
             h = int(text[9])
+            conf = (text[10])
             if block not in d.keys():
                 d[block] = {}
                 d[block][para] = {}
-                d[block][para][line] = [x, y, w, h, data]
+                d[block][para][line] = [x, y, w, h, data, block, para, line]
             else:
                 if para not in d[block].keys():
                     d[block][para] = {}
-                    d[block][para][line] = [x, y, w, h, data]
+                    d[block][para][line] = [x, y, w, h, data, block, para, line]
                 else:
                     if line not in d[block][para].keys():
-                        d[block][para][line] = [x, y, w, h, data]
+                        d[block][para][line] = [x, y, w, h, data, block, para, line]
                     else:
                         d[block][para][line][0] = min(d[block][para][line][0], x)
                         d[block][para][line][1] = min(d[block][para][line][1], y)
                         d[block][para][line][2] += w
                         d[block][para][line][3] = max(d[block][para][line][3], h)
                         d[block][para][line][4] += " " + data
-    # result1=[]
+                        d[block][para][line][5] = block
+                        d[block][para][line][6] = para
+                        d[block][para][line][7] = line
     for block in d.keys():
         for para in d[block].keys():
             for line in d[block][para].keys():
                 word = d[block][para][line]
-                # print([word[0],word[1],word[2]+word[0],word[3]+word[1]])
                 if not any(
                     has_overlap(
                         [word[0], word[1], word[2] + word[0], word[3] + word[1]], b
                     )
                     for b in result1
                 ):
-                    result1.append([word[0],word[1],word[2] + word[0],word[3] + word[1],"Text",word[3],word[4],])
+                    result1.append([word[0],word[1],word[2] + word[0],word[3] + word[1],"Text",word[3],word[4],word[5],word[6],word[7]])
     result1 = sorted(result1, key=lambda x: x[1])
     return result1
 
@@ -263,17 +265,17 @@ def pdf_to_txt(orig_pdf_path, project_folder_name, language_model, ocr_only, is_
         else:
             result = get_lpmodel_objs(img_path, [])
             result = get_tesseract_objs(result, img_path, language_model)
+            # result = get_tesseract_objs([], img_path, language_model)
             img = cv2.imread(img_path)
             tags = ""
             temp = 0
             depth = 0
             for index, l in enumerate(result):
-                # print(l)
-                div = f"\t\t\t<div class='ocr_carea' style='position:absolute;width:{str(l[2]-l[0])}px;top: {str(depth+l[1])}px;left: {str(l[0])}px;'>"
+                div = f"\t\t\t<div class='ocr_carea' id='block' style='position:absolute;width:{str(l[2]-l[0])}px;top: {str(depth+l[1])}px;left: {str(l[0])}px;'>\n"
                 if l[4] == "Text":
                     span_tag = l[6].split(" ")
-                    p = f"<p class='ocr_par' style='font_size=0.5em;'>"
-                    span_line = f"<span class='ocr_line'>"
+                    p = f"<p class='ocr_par' id='par_{str(l[8])}'>\n"
+                    span_line = f"<span class='ocr_line' id='line_{str(l[9])}' title='bbox {str(l[0])} {str(l[1])} {str(l[2])} {str(l[3])};' >\n"
                     for i in enumerate(span_tag):
                         span = f"<span class='ocrx_word'>{i[1]}</span>\n"
                         span_line += span
@@ -289,7 +291,6 @@ def pdf_to_txt(orig_pdf_path, project_folder_name, language_model, ocr_only, is_
                     div += i
                 div += "</div>\n"
                 tags += div
-                # print(div)
                 temp = l[3]
             depth += temp + 200
             hocr = f"""
