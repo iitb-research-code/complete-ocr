@@ -7,5 +7,6 @@ rapidfuzz==2.15.1
 opencv-python
 scikit-learn
 beautifulsoup4
+layoutparser
 scikit-image
 scipy
