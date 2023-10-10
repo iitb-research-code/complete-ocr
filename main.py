@@ -39,8 +39,7 @@ from PIL import Image
 from bs4 import BeautifulSoup
 
 from utility.config import *
-
-from text_attributes import TextAttributes
+from utility.text_attributes import TextAttributes
 
 
 ### For parsing boolean from string
@@ -76,33 +75,6 @@ def initialize_handwritten_models(language_model):
 
 
 
-def get_hocr(json_data):
-
-    hocr_content = []
-    for page in json_data['pages']:
-        hocr_content.append('<div class="ocr_page">')
-        for block in page['blocks']:
-            block_geometry = block['geometry']
-            hocr_content.append(f'<p class="ocr_carea" title="bbox {block_geometry[0][0]} {block_geometry[0][1]} {block_geometry[1][0]} {block_geometry[1][1]}">')
-            for line in block['lines']:
-                line_geometry = line['geometry']
-                hocr_content.append(f'<span class="ocr_line" title="bbox {line_geometry[0][0]} {line_geometry[0][1]} {line_geometry[1][0]} {line_geometry[1][1]}">')
-                for word in line['words']:
-                    word_geometry = word['geometry']
-                    word_bbox = f'bbox {word_geometry[0][0]} {word_geometry[0][1]} {word_geometry[1][0]} {word_geometry[1][1]} x_wconf {word["confidence"]:.2f}'
-                    word_text = f'{word["value"]}'
-                    word_hocr = f'<span class="ocrx_word" title="{word_bbox}">{word_text}</span>'
-                    hocr_content.append(word_hocr)
-                hocr_content.append('</span>')
-            hocr_content.append('</p>')
-        hocr_content.append('</div>')
-
-    # Combine content and create the complete HOCR document
-    complete_hocr = f'<!DOCTYPE html><html><head><title></title></head><body>{" ".join(hocr_content)}</body></html>'
-    return complete_hocr
-
-
-
 ### Handwritten OCR using Doctr
 def handwritten_ocr(image_path, predictor, file_path):
 
@@ -127,12 +99,8 @@ def handwritten_ocr(image_path, predictor, file_path):
 
     ta = TextAttributes([image_path], 'doctr', thres=args.bold_threshold, k_size=args.kernel_size)
     hocr = ta.generate(result.export(),"hocr")
-    soup = BeautifulSoup(hocr, 'html.parser')
-    prettified_hocr = soup.prettify()
 
-    with open(file_path[:-3] + 'hocr', "w", encoding="utf-8") as output_file:
-        output_file.write(prettified_hocr)
-
+    return hocr
 
 
 ### Printed OCR using Tesseract
@@ -151,6 +119,7 @@ def pdf_to_txt(orig_pdf_path, project_folder_name, language_model, ocr_only, is_
     output_directory = os.path.join(OUTPUT_DIR, project_folder_name)
     images_folder = os.path.join(output_directory, "Images")
     print('Output Directory is :', output_directory)
+    print('images_folder: ',images_folder)
 
     print('Creating Directories for storing OCR outputs and data')
     for directory in DIRECTORIES:
@@ -171,7 +140,8 @@ def pdf_to_txt(orig_pdf_path, project_folder_name, language_model, ocr_only, is_
         convert_from_path(orig_pdf_path ,output_folder=images_folder, dpi=DPI,fmt='jpeg',jpegopt=JPEGOPT,output_file=output_file)
         print("Images Creation Done.")
     elif args.input_type == 'images':
-        shutil.copytree(args.input_file, images_folder)
+        shutil.copytree(args.orig_pdf_path, images_folder)
+
 
     print(" *** STARTING OCR ENGINE *** ")
     print("Selected language model :", language_model)
@@ -179,6 +149,7 @@ def pdf_to_txt(orig_pdf_path, project_folder_name, language_model, ocr_only, is_
     startTime = time.time()
     img_files = sorted(os.listdir(images_folder))
     individual_output_dir = os.path.join(output_directory, "Inds/")
+    ProcessedOutput=os.path.join(output_directory,'ProcessedImages/')
     print('Performing OCR on Images')
 
     if(is_handwritten):
@@ -196,15 +167,15 @@ def pdf_to_txt(orig_pdf_path, project_folder_name, language_model, ocr_only, is_
         gray_image = image.convert('L')
 
         if(is_handwritten):
-             handwritten_ocr(img_path, predictor, individual_output_dir + img_file[:-3] + 'txt')
+            hocr=handwritten_ocr(img_path, predictor, individual_output_dir + img_file[:-3] + 'txt')
         else:
             txt, hocr = printed_ocr(img_path,gray_image, language_model)
 
             with open(individual_output_dir +img_file[:-3] + 'txt', 'w') as f:
                 f.write(txt)
-
-            with open(individual_output_dir + img_file[:-3] + 'hocr', 'w+b') as f:
-                f.write(hocr)
+        # print('hocr_output saved at',individual_output_dir + img_file[:-3] + 'html')
+        with open(ProcessedOutput + img_file[:-3] + 'html', 'w') as f:
+            f.write(hocr)
     
     
     endTIme = time.time()

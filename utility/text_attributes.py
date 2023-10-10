@@ -91,16 +91,17 @@ class TextAttributes:
 
         hocr_content = []
         for p,page in enumerate(doc["pages"]):
-            hocr_content.append('<div class="ocr_page">')
+            hocr_content.append('\t<div class="ocr_page">\n')
+            y,x=page['dimensions']
             for b,block in enumerate(page["blocks"]):
                 block_geometry = block['geometry']
-                hocr_content.append(f'<div class="ocr_carea" title="bbox {block_geometry[0][0]} {block_geometry[0][1]} {block_geometry[1][0]} {block_geometry[1][1]}">')
+                hocr_content.append(f'\t\t<span class="ocr_carea" title="bbox {str(int(block_geometry[0][0]*x))} {str(int(block_geometry[0][1]*y))} {str(int(block_geometry[1][0]*x))} {str(int(block_geometry[1][1]*y))}">\n')
                 for l,line in enumerate(block["lines"]):
                     line_geometry = line['geometry']
-                    hocr_content.append(f'<div class="ocr_line" title="bbox {line_geometry[0][0]} {line_geometry[0][1]} {line_geometry[1][0]} {line_geometry[1][1]}">')
+                    hocr_content.append(f'\t\t\t<span class="ocr_line" title="bbox {str(int(line_geometry[0][0]*x))} {str(int(line_geometry[0][1]*y))} {str(int(line_geometry[1][0]*x))} {str(int(line_geometry[1][1]*y))}" style="position:absolute;top: {str(int(line_geometry[0][1]*y))}px;left: {str(int(line_geometry[0][0]*x))}px;">\n')
                     for w,word in enumerate(line["words"]):
                         word_geometry = word['geometry']
-                        word_bbox = f'bbox {word_geometry[0][0]} {word_geometry[0][1]} {word_geometry[1][0]} {word_geometry[1][1]} x_wconf {word["confidence"]:.2f}'
+                        word_bbox = f'bbox {str(int(word_geometry[0][0]*x))} {str(int(word_geometry[0][1]*y))} {str(int(word_geometry[1][0]*x))} {str(int(word_geometry[1][1]*y))} x_wconf {word["confidence"]:.2f}'
                         word_text = f'{word["value"]}'
 
                         word_img = self.get_image(self.images[p], page["dimensions"], word_geometry)
@@ -111,16 +112,29 @@ class TextAttributes:
                         color = self.get_color(word_img, mode="dark")
 
                         b,g,r = color
-                        style= f"font-weight: {'bold' if bold else 'regular'}; color: rgb({r},{g},{b});"
-                        word_hocr = f'<span class="ocrx_word" title="{word_bbox}" style="{style}">{word_text}</span>'
+                        style= f"font-weight: {'bold' if bold else 'regular'}; color: rgb({r},{g},{b}); display:inline-block"
+                        word_hocr = f'\t\t\t\t<span class="ocrx_word" title="{word_bbox}" style="{style}">{word_text}</span>\n'
                         hocr_content.append(word_hocr)
-                    hocr_content.append('</div>')
-                hocr_content.append('</div>')
-            hocr_content.append('</div>')
+                    hocr_content.append('\t\t\t</span>\n')
+                hocr_content.append('\t\t</span>\n')
+            hocr_content.append('\t</div>\n')
 
-        complete_hocr = f'<!DOCTYPE html><html><head><title></title></head><body>{" ".join(hocr_content)}</body></html>'
-
+        # Combine content and create the complete HOCR document
+        complete_hocr = f'''
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <meta charset="UTF-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Output</title>
+    </head>
+    <body>
+    {" ".join(hocr_content)}
+    </body>
+    </html>'''
         return complete_hocr
+
 
     def parse_tesseract_to_hocr(self,hocr):
         """Returns hocr with text attributes from tesseract output"""
@@ -133,6 +147,9 @@ class TextAttributes:
                         bbox, baseline, x_size, x_ascend, x_descend = line.get("title").split(";")
                         size, asc, dsc = float(x_size.split()[1]), float(x_ascend.split()[1]), float(x_descend.split()[1])
                         height = int(size + asc - dsc)
+                        x1,y1,x2,y2 = map(int,bbox.split()[1:])
+                        style=f"position:absolute; top:{str(y1)}px; left:{str(x1)}px;"
+                        line['style']=style
                         for w,word in enumerate(line.find_all(class_="ocrx_word")):
                             bbox,conf = word.get("title").split(";")
                             x1,y1,x2,y2 = map(int,bbox.split()[1:])
@@ -146,7 +163,7 @@ class TextAttributes:
 
                             b,g,r = color
                             fontsize = height/self.median_size
-                            style = f"font-weight: {'bold' if bold else 'regular'}; color: rgb({r},{g},{b}); font-size: {fontsize}em"
+                            style = f"font-weight: {'bold' if bold else 'regular'}; color: rgb({r},{g},{b}); font-size: {fontsize}em; display:inline-block"
                             word["style"] = style
         return soup.prettify()
 
