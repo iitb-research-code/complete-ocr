@@ -18,6 +18,9 @@ import argparse
 import torch
 import pytesseract
 
+import cv2
+import layoutparser as lp
+
 # use torch environment
 os.environ["USE_TORCH"] = "1"
 
@@ -40,6 +43,7 @@ from bs4 import BeautifulSoup
 
 from utility.config import *
 from utility.text_attributes import TextAttributes
+from utility.utils import get_final_table_hocrs_from_image
 
 
 ### For parsing boolean from string
@@ -112,6 +116,24 @@ def printed_ocr(img_path,gray_image, language_model):
     return txt, hocr
 
 
+def get_images_from_page_image(model, image, outputDirectory, pagenumber):
+    layout = model.detect(image)
+    result = []
+    # Figure Extraction
+    figure_count = 0
+    for layer in layout:
+        if(layer.type=='Figure'):
+            x1, y1, x2, y2 = tuple(int(num) for num in layer.block.coordinates)
+            cropped_image = image[y1: y2, x1: x2]
+            image_file_name = '/Cropped_Images/figure_' + str(pagenumber) + '_' + str(figure_count) + '.jpg'
+            cv2.imwrite(outputDirectory + image_file_name, cropped_image)
+            figure_count += 1
+            cv2.rectangle(image, (x1, y1), (x2, y2), (0, 255, 0), -1)
+            bbox = [x1, y1, x2, y2]
+            imagehocr = f"<img class=\"ocr_im\" title=\"bbox {x1} {y1} {x2} {y2}\" src=\"../{image_file_name}\">"
+            result.append([imagehocr, bbox])
+
+    return result
 
 
 def pdf_to_txt(orig_pdf_path, project_folder_name, language_model, ocr_only, is_handwritten=False):
@@ -142,6 +164,7 @@ def pdf_to_txt(orig_pdf_path, project_folder_name, language_model, ocr_only, is_
     elif args.input_type == 'images':
         shutil.copytree(args.orig_pdf_path, images_folder)
 
+    model = lp.Detectron2LayoutModel(model_config, extra_config=[extra_config, 0.8], label_map=label_map)
 
     print(" *** STARTING OCR ENGINE *** ")
     print("Selected language model :", language_model)
@@ -163,6 +186,33 @@ def pdf_to_txt(orig_pdf_path, project_folder_name, language_model, ocr_only, is_
     for img_file in img_files:
 
         img_path = os.path.join(images_folder, img_file)
+        img=cv2.imread(img_path)
+
+        dash, dot = img_file.index('-'), img_file.index('.')
+        page = int(img_file[dash + 1 : dot])
+
+        #  getting the tables
+        print('Performing Table Detection',end=' -> ')
+        tabledata = get_final_table_hocrs_from_image(img_path)
+        print('Table Detection Done')
+
+        # Hide all tables from images before perfroming recognizing text 
+        if len(tabledata) > 0:
+            for entry in tabledata:
+                bbox = entry[1]
+                x1, y1, x2, y2 = list(map(int,bbox))
+                cv2.rectangle(img, (x1, y1), (x2, y2), (255, 0, 255), -1)
+            img_path = output_directory + "/MaskedImages/" + img_file[:-4] + '_filtered.jpg'
+            cv2.imwrite(img_path, img)
+
+        # Perform figure detection from page image to get their hocrs and bounding boxes
+        figuredata = get_images_from_page_image(model, img, output_directory, page)
+
+            # Storing masked output:
+        if len(figuredata) > 0 and storeMaskedImages:
+            img_path = output_directory + "/MaskedImages/" + img_file[:-4] + '_filtered.jpg'
+            cv2.imwrite(img_path, img)
+
         image = Image.open(img_path)
         gray_image = image.convert('L')
 
@@ -173,9 +223,38 @@ def pdf_to_txt(orig_pdf_path, project_folder_name, language_model, ocr_only, is_
 
             with open(individual_output_dir +img_file[:-3] + 'txt', 'w') as f:
                 f.write(txt)
-        # print('hocr_output saved at',individual_output_dir + img_file[:-3] + 'html')
+
+        soup = BeautifulSoup(hocr, 'html.parser')
+        # Adding table hocr in final hocr at proper position
+        if len(tabledata) > 0:
+            for entry in tabledata:
+                tab_tag = entry[0]
+                tab_element = BeautifulSoup(tab_tag, 'html.parser')
+                tab_bbox = entry[1]
+                # y-coordinate
+                tab_position = tab_bbox[1]
+                for elem in soup.find_all('span', class_="ocr_line"):
+                    find_all_ele = elem.attrs["title"].split(" ")
+                    line_position = int(find_all_ele[2])
+                    if tab_position < line_position:
+                        elem.insert_before(tab_element)
+                        break
+
+        # Adding image hocr in final hocr at proper position
+        if len(figuredata) > 0:
+            for image_details in figuredata:
+                imghocr = image_details[0]
+                img_element = BeautifulSoup(imghocr, 'html.parser')
+                img_position = image_details[1][1]
+                for elem in soup.find_all('span', class_="ocr_line"):
+                    find_all_ele = elem.attrs["title"].split(" ")
+                    line_position = int(find_all_ele[2])
+                    if img_position < line_position:
+                        elem.insert_before(img_element)
+                        break
+
         with open(ProcessedOutput + img_file[:-3] + 'html', 'w') as f:
-            f.write(hocr)
+            f.write(str(soup))
     
     
     endTIme = time.time()
@@ -191,7 +270,7 @@ def pdf_to_txt(orig_pdf_path, project_folder_name, language_model, ocr_only, is_
         os.system(rename_command)
         print('Corrector Output Generated')
 
-    print('OCR Engine Completed Successfully')
+    print('OCR Engine Completed Successfully , The Text Outputs Are In ./output_books/output_set/Inds/ and Hocr Outputs IN ./output_books/output_set/ProcessedImages/')
 
 def parse_args():
     parser = argparse.ArgumentParser(description="Documents OCR Input Arguments", formatter_class=argparse.ArgumentDefaultsHelpFormatter)
