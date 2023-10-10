@@ -40,7 +40,7 @@ from doctr.models.detection.predictor import DetectionPredictor
 from doctr.models.recognition.predictor import RecognitionPredictor
 from doctr.models.preprocessor import PreProcessor
 
-# from text_attributes import TextAttributes
+from text_attributes import TextAttributes
 
 from utility.config import *
 from figureDetection import *
@@ -196,16 +196,37 @@ def get_tesseract_objs(result1, img_path, lang):
         for para in d[block].keys():
             for line in d[block][para].keys():
                 word = d[block][para][line]
-                if not any(
-                    has_overlap(
-                        [word[0], word[1], word[2] + word[0], word[3] + word[1]], b
-                    )
-                    for b in result1
-                ):
+                print([word[0], word[1], word[2] + word[0], word[3] + word[1]])
+                if not any(has_overlap([word[0], word[1], word[2] + word[0], word[3] + word[1]], b)for b in result1):
                     result1.append([word[0],word[1],word[2] + word[0],word[3] + word[1],"Text",word[3],word[4],word[5],word[6],word[7]])
     result1 = sorted(result1, key=lambda x: x[1])
     return result1
 
+def generate_hocr(result1, img_path, language_model):
+
+    hocr = pytesseract.image_to_pdf_or_hocr(img_path, extension="hocr", lang=language_model)
+
+    # TextAttributes Code
+    ta = TextAttributes([img_path], ocr_engine='tesseract')
+    result = ta.generate(hocr,output_type='hocr')
+
+    soup = BeautifulSoup(result, 'html.parser')
+    line_tags = soup.find_all('span',class_="ocr_line")
+
+    # Extract Required Data from hOCR
+    hocr_info_list = []
+    for line_tag in line_tags:
+        bbox_value = line_tag['title'].split(';')[0].split(' ')[1:]
+        bbox_value_int = [int(val) for val in bbox_value]
+        word_tags = line_tag.find_all('span', class_="ocrx_word")
+        hocr_info_list.append([bbox_value_int, word_tags])
+
+    for index, hocr_info in enumerate(hocr_info_list):
+        if not any(has_overlap([hocr_info[0][0], hocr_info[0][1], hocr_info[0][2], hocr_info[0][3]], b)for b in result1):
+            result1.append([hocr_info[0][0],hocr_info[0][1],hocr_info[0][2],hocr_info[0][3],"Text",hocr_info[0][3],hocr_info[1]])
+    result1 = sorted(result1, key=lambda x: x[1])
+
+    return result1
 
 
 
@@ -264,8 +285,8 @@ def pdf_to_txt(orig_pdf_path, project_folder_name, language_model, ocr_only, is_
              handwritten_ocr(img_path, predictor, individual_output_dir + img_file[:-3] + 'txt')
         else:
             result = get_lpmodel_objs(img_path, [])
-            result = get_tesseract_objs(result, img_path, language_model)
-            # result = get_tesseract_objs([], img_path, language_model)
+            result = generate_hocr(result, img_path, language_model)
+            # result = get_tesseract_objs(result, img_path, language_model)
             img = cv2.imread(img_path)
             tags = ""
             temp = 0
@@ -273,11 +294,10 @@ def pdf_to_txt(orig_pdf_path, project_folder_name, language_model, ocr_only, is_
             for index, l in enumerate(result):
                 div = f"\t\t\t<div class='ocr_carea' id='block' style='position:absolute;width:{str(l[2]-l[0])}px;top: {str(depth+l[1])}px;left: {str(l[0])}px;'>\n"
                 if l[4] == "Text":
-                    span_tag = l[6].split(" ")
-                    p = f"<p class='ocr_par' id='par_{str(l[8])}'>\n"
-                    span_line = f"<span class='ocr_line' id='line_{str(l[9])}' title='bbox {str(l[0])} {str(l[1])} {str(l[2])} {str(l[3])};' >\n"
-                    for i in enumerate(span_tag):
-                        span = f"<span class='ocrx_word'>{i[1]}</span>\n"
+                    p = f"<p class='ocr_par' id='par'>\n"
+                    span_line = f"<span class='ocr_line' id='line' title='bbox {str(l[0])} {str(l[1])} {str(l[2])} {str(l[3])};' >\n"
+                    for index, span in enumerate(l[6]):
+                        span = f"{span}\n"
                         span_line += span
                     span_line += "</span>\n"
                     p += span_line
@@ -310,22 +330,10 @@ def pdf_to_txt(orig_pdf_path, project_folder_name, language_model, ocr_only, is_
     </html>"""
             soup = BeautifulSoup(hocr, "html.parser")
 
-            # TextAttributes Code
-            # ta = TextAttributes([img_path], ocr_engine='tesseract')
-            # result = ta.generate(hocr,output_type='hocr')
-
             # Write final hocrs
             hocrfile = individual_output_dir + img_file[:-3] + 'hocr'
             f = open(hocrfile, "w+")
             f.write(str(soup))
-            # txt, hocr = printed_ocr(gray_image, language_model) Give tesseract ocr the image
-
-            # with open(individual_output_dir +img_file[:-3] + 'txt', 'w') as f:
-                # f.write(txt)
-
-            # with open(individual_output_dir + img_file[:-3] + 'hocr', 'w+b') as f:
-                # f.write(hocr)
-    
     
     endTIme = time.time()
     ocr_duration = round(endTIme - startTime, 2)
