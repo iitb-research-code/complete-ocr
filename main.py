@@ -218,8 +218,13 @@ def generate_hocr(result1, img_path, language_model):
     for line_tag in line_tags:
         bbox_value = line_tag['title'].split(';')[0].split(' ')[1:]
         bbox_value_int = [int(val) for val in bbox_value]
+
+        # Check if any of the ocrx_word tags have text content to avoid overlap by empty span tags (ocrx_word)
         word_tags = line_tag.find_all('span', class_="ocrx_word")
-        hocr_info_list.append([bbox_value_int, word_tags])
+        has_text = any(word_tag.get_text(strip=True) for word_tag in word_tags)
+
+        if has_text:
+            hocr_info_list.append([bbox_value_int, word_tags])
 
     for index, hocr_info in enumerate(hocr_info_list):
         if not any(has_overlap([hocr_info[0][0], hocr_info[0][1], hocr_info[0][2], hocr_info[0][3]], b)for b in result1):
