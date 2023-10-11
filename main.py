@@ -47,10 +47,10 @@ from figureDetection import *
 
 
 
-
 ### For parsing boolean from string
 def parse_boolean(b):
     return b == True
+
 
 
 ### For simple filename generation
@@ -59,6 +59,7 @@ def simple_counter_generator(prefix="", suffix=""):
     while True:
         i+=1
         yield 'p'
+
 
 
 ### Initializing models for handwritten OCR
@@ -139,72 +140,11 @@ def handwritten_ocr(image_path, predictor, file_path):
 
 
 
-
-### Printed OCR using Tesseract
-# def printed_ocr(gray_image, language_model):
-#     txt = pytesseract.image_to_string(gray_image, lang=language_model, config=TESSDATA_DIR_CONFIG)
-#     hocr = pytesseract.image_to_pdf_or_hocr(gray_image, lang=language_model, extension='hocr', config=TESSDATA_DIR_CONFIG)
-#     return txt, hocr
-
-
 # TESSERACT DETECTED TEXT OBJECTS (Text OCR)
-def get_tesseract_objs(result1, img_path, lang):
-    img = cv2.imread(img_path)
-    words = pytesseract.image_to_data(img, lang=lang, config="--psm 6").split("\n")
-    l = []
-    for i in words:
-        i = i.split()
-        try:
-            if i[11] != "-1":
-                # print(i)
-                l.append(i)
-        except:
-            pass
-    d = {}
-    for idx, text in enumerate(l):
-        if idx != 0:
-            block = text[2]
-            para = text[3]
-            line = text[4]
-            data = text[11]
-            x = int(text[6])
-            y = int(text[7])
-            w = int(text[8])
-            h = int(text[9])
-            conf = (text[10])
-            if block not in d.keys():
-                d[block] = {}
-                d[block][para] = {}
-                d[block][para][line] = [x, y, w, h, data, block, para, line]
-            else:
-                if para not in d[block].keys():
-                    d[block][para] = {}
-                    d[block][para][line] = [x, y, w, h, data, block, para, line]
-                else:
-                    if line not in d[block][para].keys():
-                        d[block][para][line] = [x, y, w, h, data, block, para, line]
-                    else:
-                        d[block][para][line][0] = min(d[block][para][line][0], x)
-                        d[block][para][line][1] = min(d[block][para][line][1], y)
-                        d[block][para][line][2] += w
-                        d[block][para][line][3] = max(d[block][para][line][3], h)
-                        d[block][para][line][4] += " " + data
-                        d[block][para][line][5] = block
-                        d[block][para][line][6] = para
-                        d[block][para][line][7] = line
-    for block in d.keys():
-        for para in d[block].keys():
-            for line in d[block][para].keys():
-                word = d[block][para][line]
-                print([word[0], word[1], word[2] + word[0], word[3] + word[1]])
-                if not any(has_overlap([word[0], word[1], word[2] + word[0], word[3] + word[1]], b)for b in result1):
-                    result1.append([word[0],word[1],word[2] + word[0],word[3] + word[1],"Text",word[3],word[4],word[5],word[6],word[7]])
-    result1 = sorted(result1, key=lambda x: x[1])
-    return result1
+def generate_hocr(result1, gray_image, img_path, language_model):
 
-def generate_hocr(result1, img_path, language_model):
-
-    hocr = pytesseract.image_to_pdf_or_hocr(img_path, extension="hocr", lang=language_model)
+    # Pytesseract hOCR generation
+    hocr = pytesseract.image_to_pdf_or_hocr(gray_image, extension="hocr", lang=language_model)
 
     # TextAttributes Code
     ta = TextAttributes([img_path], ocr_engine='tesseract')
@@ -249,7 +189,6 @@ def pdf_to_txt(orig_pdf_path, project_folder_name, language_model, ocr_only, is_
             if directory != 'Images':
                 os.mknod(final_directory+'/README.md',mode=0o666)
 
-    
     os.system('cp ' + os.path.join(RESOURCES_DIR, 'project.xml') + ' ' + output_directory)
     os.system('cp ' + os.path.join(RESOURCES_DIR, 'Dicts/') + '* '+ output_directory+"/Dicts/")
 
@@ -283,15 +222,14 @@ def pdf_to_txt(orig_pdf_path, project_folder_name, language_model, ocr_only, is_
     for img_file in img_files:
 
         img_path = os.path.join(images_folder, img_file)
-        # image = Image.open(img_path)
-        # gray_image = image.convert('L')
+        image = Image.open(img_path)
+        gray_image = image.convert('L')
 
         if(is_handwritten):
              handwritten_ocr(img_path, predictor, individual_output_dir + img_file[:-3] + 'txt')
         else:
             result = get_lpmodel_objs(img_path, [])
-            result = generate_hocr(result, img_path, language_model)
-            # result = get_tesseract_objs(result, img_path, language_model)
+            result = generate_hocr(result, gray_image, img_path, language_model)
             img = cv2.imread(img_path)
             tags = ""
             temp = 0
