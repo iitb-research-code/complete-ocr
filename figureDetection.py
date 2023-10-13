@@ -16,8 +16,8 @@ def calculate_intersection_area(box, other_box):
     intersection_area = max(0, intersection_width) * max(0, intersection_height)
     return intersection_area
 
-
-def has_overlap(block1, block2, overlap_threshold=0.1):
+# Set overlap_threshold to 0.1 for more strict overlap detection
+def has_overlap(block1, block2, overlap_threshold=0.5):
     x1l, y1l, x1h, y1h = block1[0:4]
     x2l, y2l, x2h, y2h = block2[0:4]
     height1 = y1h - y1l
