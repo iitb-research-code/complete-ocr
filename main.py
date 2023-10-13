@@ -1,5 +1,5 @@
 '''
-THe script is used to convert pdf to txt using Doctr and Tesseract OCR
+The script is used to convert pdf to txt using Doctr and Tesseract OCR
 It is the combination of both handwritten and printed OCR using Doctr and Tesseract respectively
 The script is called from the main script in the pipeline
 It contains entire OCR pipeline engine end to end
@@ -151,7 +151,7 @@ def generate_hocr(result1, gray_image, img_path, language_model):
     result = ta.generate(hocr,output_type='hocr')
 
     soup = BeautifulSoup(result, 'html.parser')
-    line_tags = soup.find_all('span',class_="ocr_line")
+    line_tags = soup.find_all('span',class_=["ocr_line", "ocr_header"])
 
     # Extract Required Data from hOCR
     hocr_info_list = []

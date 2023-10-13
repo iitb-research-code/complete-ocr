@@ -129,7 +129,7 @@ class TextAttributes:
         for p,page in enumerate(soup.find_all(class_="ocr_page")):
             for b,block in enumerate(page.find_all(class_="ocr_carea")):
                 for par,para in enumerate(block.find_all(class_="ocr_par")):
-                    for l,line in enumerate(para.find_all(class_="ocr_line")):
+                    for l,line in enumerate(para.find_all(class_=["ocr_line", "ocr_header"])):
                         bbox, baseline, x_size, x_ascend, x_descend = line.get("title").split(";")
                         size, asc, dsc = float(x_size.split()[1]), float(x_ascend.split()[1]), float(x_descend.split()[1])
                         height = int(size + asc - dsc)
@@ -163,7 +163,7 @@ class TextAttributes:
                 j_block = {"block_id": block.get("id"),"bbox": block.get("title"),"paras":[]}
                 for par,para in enumerate(block.find_all(class_="ocr_par")):
                     j_para = {"para_id":para.get("id"),"bbox": para.get("title"),"lines":[]}
-                    for l,line in enumerate(para.find_all(class_="ocr_line")):
+                    for l,line in enumerate(para.find_all(class_=["ocr_line", "ocr_header"])):
                         bbox, baseline, x_size, x_ascend, x_descend = line.get("title").split(";")
                         size, asc, dsc = float(x_size.split()[1]), float(x_ascend.split()[1]), float(x_descend.split()[1])
                         height = int(size + asc - dsc)
@@ -201,7 +201,7 @@ class TextAttributes:
             subimages = {}
             for b,block in enumerate(page.find_all(class_="ocr_carea")):
                 for par,para in enumerate(block.find_all(class_="ocr_par")):
-                    for l,line in enumerate(para.find_all(class_="ocr_line")):
+                    for l,line in enumerate(para.find_all(class_=["ocr_line", "ocr_header"])):
 
                         bbox, baseline, x_size, x_ascend, x_descend = line.get("title").split(";")
                         size, asc, dsc = float(x_size.split()[1]), float(x_ascend.split()[1]), float(x_descend.split()[1])
