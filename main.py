@@ -144,7 +144,7 @@ def handwritten_ocr(image_path, predictor, file_path):
 def generate_hocr(result1, gray_image, img_path, language_model):
 
     # Pytesseract hOCR generation
-    hocr = pytesseract.image_to_pdf_or_hocr(gray_image, extension="hocr", lang=language_model)
+    hocr = pytesseract.image_to_pdf_or_hocr(gray_image, extension="hocr", lang=language_model, config=TESSDATA_DIR_CONFIG)
 
     # TextAttributes Code
     ta = TextAttributes([img_path], ocr_engine='tesseract')
@@ -155,13 +155,23 @@ def generate_hocr(result1, gray_image, img_path, language_model):
 
     # Extract Required Data from hOCR
     hocr_info_list = []
+    formatted_text = []
     for line_tag in line_tags:
         bbox_value = line_tag['title'].split(';')[0].split(' ')[1:]
         bbox_value_int = [int(val) for val in bbox_value]
 
         # Check if any of the ocrx_word tags have text content to avoid overlap by empty span tags (ocrx_word)
         word_tags = line_tag.find_all('span', class_="ocrx_word")
-        has_text = any(word_tag.get_text(strip=True) for word_tag in word_tags)
+
+        # Extract text contents for .txt file
+        text_array = []
+        for word_tag1 in word_tags:
+            text_array.append(word_tag1.get_text(strip=True))
+        formatted_text.append(' '.join(text_array))
+        
+        
+        has_text = any(text_array)
+        # has_text = any(word_tag.get_text(strip=True) for word_tag in word_tags)
 
         if has_text:
             hocr_info_list.append([bbox_value_int, word_tags])
@@ -171,7 +181,7 @@ def generate_hocr(result1, gray_image, img_path, language_model):
             result1.append([hocr_info[0][0],hocr_info[0][1],hocr_info[0][2],hocr_info[0][3],"Text",hocr_info[0][3],hocr_info[1]])
     result1 = sorted(result1, key=lambda x: x[1])
 
-    return result1
+    return formatted_text, result1
 
 
 
@@ -229,7 +239,13 @@ def pdf_to_txt(orig_pdf_path, project_folder_name, language_model, ocr_only, is_
              handwritten_ocr(img_path, predictor, individual_output_dir + img_file[:-3] + 'txt')
         else:
             result = get_lpmodel_objs(img_path, [])
-            result = generate_hocr(result, gray_image, img_path, language_model)
+            formatted_text, result = generate_hocr(result, gray_image, img_path, language_model)
+
+            # Write .txt files
+            with open(individual_output_dir +img_file[:-3] + 'txt', 'w') as file:
+                for sentence in formatted_text:
+                    file.write(sentence + "\n")
+
             img = cv2.imread(img_path)
             tags = ""
             temp = 0
