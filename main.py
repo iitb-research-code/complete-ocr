@@ -128,7 +128,7 @@ def get_images_from_page_image(model, image, outputDirectory, pagenumber):
             image_file_name = '/Cropped_Images/figure_' + str(pagenumber) + '_' + str(figure_count) + '.jpg'
             cv2.imwrite(outputDirectory + image_file_name, cropped_image)
             figure_count += 1
-            cv2.rectangle(image, (x1, y1), (x2, y2), (0, 255, 0), -1)
+            cv2.rectangle(image, (x1, y1), (x2, y2), (255, 0, 0), -1)
             bbox = [x1, y1, x2, y2]
             imagehocr = f"<img class=\"ocr_im\" title=\"bbox {x1} {y1} {x2} {y2}\" src=\"../{image_file_name}\">"
             result.append([imagehocr, bbox])
@@ -206,21 +206,22 @@ def pdf_to_txt(orig_pdf_path, project_folder_name, language_model, ocr_only, is_
             cv2.imwrite(img_path, img)
 
         # Perform figure detection from page image to get their hocrs and bounding boxes
-        figuredata = get_images_from_page_image(model, img, output_directory, page)
+        # figuredata = get_images_from_page_image(model, img, output_directory, page)
 
-            # Storing masked output:
-        if len(figuredata) > 0 and storeMaskedImages:
-            img_path = output_directory + "/MaskedImages/" + img_file[:-4] + '_filtered.jpg'
-            cv2.imwrite(img_path, img)
+        #     # Storing masked output:
+        # if len(figuredata) > 0 and storeMaskedImages:
+        #     img_path = output_directory + "/MaskedImages/" + img_file[:-4] + '_filtered.jpg'
+        #     cv2.imwrite(img_path, img)
 
         image = Image.open(img_path)
         gray_image = image.convert('L')
-
+        
+        print('PREDICTING')
         if(is_handwritten):
             hocr=handwritten_ocr(img_path, predictor, individual_output_dir + img_file[:-3] + 'txt')
         else:
             txt, hocr = printed_ocr(img_path,gray_image, language_model)
-
+            print('SAVING',individual_output_dir +img_file[:-3] + 'txt')
             with open(individual_output_dir +img_file[:-3] + 'txt', 'w') as f:
                 f.write(txt)
 
@@ -241,17 +242,17 @@ def pdf_to_txt(orig_pdf_path, project_folder_name, language_model, ocr_only, is_
                         break
 
         # Adding image hocr in final hocr at proper position
-        if len(figuredata) > 0:
-            for image_details in figuredata:
-                imghocr = image_details[0]
-                img_element = BeautifulSoup(imghocr, 'html.parser')
-                img_position = image_details[1][1]
-                for elem in soup.find_all('span', class_="ocr_line"):
-                    find_all_ele = elem.attrs["title"].split(" ")
-                    line_position = int(find_all_ele[2])
-                    if img_position < line_position:
-                        elem.insert_before(img_element)
-                        break
+        # if len(figuredata) > 0:
+        #     for image_details in figuredata:
+        #         imghocr = image_details[0]
+        #         img_element = BeautifulSoup(imghocr, 'html.parser')
+        #         img_position = image_details[1][1]
+        #         for elem in soup.find_all('span', class_="ocr_line"):
+        #             find_all_ele = elem.attrs["title"].split(" ")
+        #             line_position = int(find_all_ele[2])
+        #             if img_position < line_position:
+        #                 elem.insert_before(img_element)
+        #                 break
 
         with open(ProcessedOutput + img_file[:-3] + 'html', 'w') as f:
             f.write(str(soup))
@@ -276,7 +277,7 @@ def parse_args():
     parser = argparse.ArgumentParser(description="Documents OCR Input Arguments", formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 
     parser.add_argument("-i", "--orig_pdf_path", type=str, default=None, help="path to the input pdf file")
-    parser.add_argument("-it", "--input_type", type=str, default="pdf", help="type of input file | pdf/images")
+    parser.add_argument("-it","--input_type", type=str, default="pdf", help="type of input file | pdf/images")
     parser.add_argument("-o", "--project_folder_name", type=str, default="output_set", help="Name of the output folder")
     parser.add_argument("-l", "--language_model", type=str, default="Devangari", help="language to be used for OCR")
     parser.add_argument("-t", "--ocr_method", dest="ocr_method", action="store_true", help="OCR method : Printed/Handwritten, True if Handwritten")

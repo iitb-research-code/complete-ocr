@@ -24,7 +24,7 @@ nms_table_threshold = 0.1
 nms_cell_threshold = 0.0001
 
 
-DIRECTORIES = ['Images','CorrectorOutput', 'Comments', 'Inds', 'Dicts', 'ProcessedImages', 'VerifierOutput', 'MaskedImages']
+DIRECTORIES = ['Images','CorrectorOutput', 'Comments', 'Inds', 'Dicts', 'ProcessedImages', 'VerifierOutput', 'MaskedImages','Cropped_Images']
 
 
 TESSDATA_DIR_CONFIG = '--oem 3 --psm 6'# --tessdata-dir "/home/ayush/udaan-deploy-flask/udaan-deploy-pipeline/tesseract-exec/share/tessdata/"'
