@@ -1,4 +1,4 @@
-# SAMPOORN-OCR
+# Complete-OCR
 
 Repository contains OCR code for end-to-end outputs from pdfs to hocr outputs of OCR procedure
 
